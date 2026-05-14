@@ -4,8 +4,8 @@ import { isCronAuthorized } from "@/lib/cron-auth";
 
 export const maxDuration = 300;
 
-const IMPORTANCE_THRESHOLD = 5;
-const BATCH_SIZE = 50; // process up to 50 unprocessed tweets per run
+const IMPORTANCE_THRESHOLD = 4;
+const BATCH_SIZE = 20; // keep within Groq free tier rate limits
 
 export function GET(request: Request) {
   if (!isCronAuthorized(request)) {
@@ -111,8 +111,8 @@ export async function POST() {
       }
     }
 
-    // Respect Gemini free tier rate limit (15 req/min)
-    await new Promise((r) => setTimeout(r, 1000));
+    // Groq free tier: ~30 req/min — 2s delay keeps us safe
+    await new Promise((r) => setTimeout(r, 2000));
   }
 
   return Response.json({ processed, events_created: eventsCreated, tweets_total: tweets.length });

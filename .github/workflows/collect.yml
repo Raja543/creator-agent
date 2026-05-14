@@ -24,6 +24,9 @@ jobs:
             --max-time 300 \
             -w "\nStatus: %{http_code}"
 
+      - name: Wait for rate limit to recover
+        run: sleep 60
+
       - name: Generate summary + ideas (every 4 hours)
         run: |
           HOUR=$(date -u +%-H)
