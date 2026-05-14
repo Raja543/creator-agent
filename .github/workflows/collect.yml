@@ -1,0 +1,19 @@
+name: Collect Tweets
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Run tweet collection
+        run: |
+          curl -s -X GET "${{ secrets.APP_URL }}/api/pipeline/collect" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            --max-time 420 \
+            -w "\nStatus: %{http_code}" \
+            -o /dev/stdout

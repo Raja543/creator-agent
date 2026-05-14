@@ -1,0 +1,27 @@
+name: Generate Intelligence Reports
+
+on:
+  schedule:
+    - cron: "0 */4 * * *"
+  workflow_dispatch:
+
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Generate ecosystem summary
+        run: |
+          curl -s -X GET "${{ secrets.APP_URL }}/api/pipeline/summarize" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            --max-time 120 \
+            -w "\nStatus: %{http_code}" \
+            -o /dev/stdout
+
+      - name: Generate content ideas
+        run: |
+          curl -s -X GET "${{ secrets.APP_URL }}/api/pipeline/ideas" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            --max-time 120 \
+            -w "\nStatus: %{http_code}" \
+            -o /dev/stdout
