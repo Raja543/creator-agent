@@ -5,7 +5,7 @@ import { isCronAuthorized } from "@/lib/cron-auth";
 export const maxDuration = 300;
 
 const IMPORTANCE_THRESHOLD = 4;
-const BATCH_SIZE = 30;
+const BATCH_SIZE = 15;
 
 export function GET(request: Request) {
   if (!isCronAuthorized(request)) {
@@ -15,13 +15,11 @@ export function GET(request: Request) {
 }
 
 async function classifyWithRetry(content: string) {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const result = await classifyTweet(content);
-    if (result) return result;
-    // Wait longer on each retry — likely a rate limit
-    await new Promise((r) => setTimeout(r, 3000 * (attempt + 1)));
-  }
-  return null;
+  const result = await classifyTweet(content);
+  if (result) return result;
+  // One retry after a short pause
+  await new Promise((r) => setTimeout(r, 2000));
+  return classifyTweet(content);
 }
 
 export async function POST() {
@@ -125,8 +123,7 @@ export async function POST() {
       }
     }
 
-    // Groq free tier: 30 req/min — 2s gap keeps us well within limits
-    await new Promise((r) => setTimeout(r, 2000));
+    await new Promise((r) => setTimeout(r, 1500));
   }
 
   return Response.json({
