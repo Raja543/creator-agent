@@ -14,6 +14,14 @@ const NITTER_INSTANCES = [
   "https://nitter.net",
   "https://nitter.privacydev.net",
   "https://nitter.poast.org",
+  "https://nitter.tiekoetter.com",
+  "https://nitter.1d4.us",
+];
+
+// Free proxy services — fetch Nitter on our behalf from non-datacenter IPs
+const PROXY_PREFIXES = [
+  (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
 ];
 
 const BROWSER_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -64,18 +72,35 @@ function parseRssItem(item: string, username: string): ScrapedTweet | null {
   };
 }
 
-async function fetchFromInstance(instance: string, username: string): Promise<string | null> {
+async function fetchUrl(url: string): Promise<string | null> {
   try {
-    const res = await fetch(`${instance}/${username}/rss`, {
+    const res = await fetch(url, {
       headers: { "User-Agent": BROWSER_UA },
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(12_000),
       cache: "no-store",
     });
     if (!res.ok) return null;
-    return await res.text();
+    const text = await res.text();
+    return text.includes("<item>") ? text : null;
   } catch {
     return null;
   }
+}
+
+async function fetchFromInstance(instance: string, username: string): Promise<string | null> {
+  const rssUrl = `${instance}/${username}/rss`;
+
+  // Try direct (works on local/residential IPs)
+  const direct = await fetchUrl(rssUrl);
+  if (direct) return direct;
+
+  // Fall back to free proxies (works from cloud/datacenter IPs)
+  for (const makeProxy of PROXY_PREFIXES) {
+    const proxied = await fetchUrl(makeProxy(rssUrl));
+    if (proxied) return proxied;
+  }
+
+  return null;
 }
 
 export async function scrapeUserTweets(username: string, count = 20): Promise<ScrapedTweet[]> {
