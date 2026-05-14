@@ -12,14 +12,14 @@ jobs:
     steps:
       - name: Collect tweets
         run: |
-          curl -s -X GET "${{ secrets.APP_URL }}/api/pipeline/collect" \
+          curl -sL -X GET "${{ secrets.APP_URL }}/api/pipeline/collect" \
             -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
             --max-time 420 \
             -w "\nStatus: %{http_code}"
 
       - name: Process tweets into events
         run: |
-          curl -s -X GET "${{ secrets.APP_URL }}/api/pipeline/process" \
+          curl -sL -X GET "${{ secrets.APP_URL }}/api/pipeline/process" \
             -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
             --max-time 300 \
             -w "\nStatus: %{http_code}"
@@ -28,15 +28,13 @@ jobs:
         run: |
           HOUR=$(date -u +%-H)
           MINUTE=$(date -u +%-M)
-          # Run at top of every 4th hour: 0:00, 4:00, 8:00, 12:00, 16:00, 20:00
-          # Also always run on manual trigger (workflow_dispatch)
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] || ([ "$MINUTE" -lt 16 ] && [ $(($HOUR % 4)) -eq 0 ]); then
             echo "Running summary and ideas generation..."
-            curl -s -X GET "${{ secrets.APP_URL }}/api/pipeline/summarize" \
+            curl -sL -X GET "${{ secrets.APP_URL }}/api/pipeline/summarize" \
               -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
               --max-time 120 \
               -w "\nStatus: %{http_code}"
-            curl -s -X GET "${{ secrets.APP_URL }}/api/pipeline/ideas" \
+            curl -sL -X GET "${{ secrets.APP_URL }}/api/pipeline/ideas" \
               -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
               --max-time 120 \
               -w "\nStatus: %{http_code}"
