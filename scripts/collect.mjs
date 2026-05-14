@@ -2,8 +2,18 @@
 // Runs directly in GitHub Actions (Azure IPs) — no Vercel, no proxies needed
 // Requires Node 18+ (native fetch). No npm install needed.
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY;
+// Load .env file if running locally
+import { readFileSync } from "fs";
+try {
+  const env = readFileSync(new URL("../.env", import.meta.url), "utf8");
+  for (const line of env.split("\n")) {
+    const [k, ...v] = line.split("=");
+    if (k && v.length) process.env[k.trim()] = v.join("=").trim();
+  }
+} catch {}
+
+const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("Missing SUPABASE_URL or SUPABASE_KEY");

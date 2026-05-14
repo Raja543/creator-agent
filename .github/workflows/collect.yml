@@ -11,20 +11,6 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Collect tweets (runs from GitHub IPs, not Vercel)
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: node scripts/collect.mjs
-
       - name: Process tweets into events
         run: |
           curl -sL -X GET "${{ secrets.APP_URL }}/api/pipeline/process" \
