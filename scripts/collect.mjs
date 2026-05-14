@@ -134,6 +134,14 @@ async function getTweets(username) {
 // --- Main ---
 async function main() {
   const start = Date.now();
+
+  // Quick sanity check — show tweet count already in DB
+  const existing = await fetch(`${SUPABASE_URL}/rest/v1/tweets?select=id&processed=eq.false`, { headers: headers({ Prefer: "count=exact" }) });
+  const unprocessed = existing.headers.get("content-range")?.split("/")?.[1] ?? "?";
+  const total = await fetch(`${SUPABASE_URL}/rest/v1/tweets?select=id`, { headers: headers({ Prefer: "count=exact" }) });
+  const totalCount = total.headers.get("content-range")?.split("/")?.[1] ?? "?";
+  console.log(`DB status: ${totalCount} total tweets, ${unprocessed} unprocessed`);
+
   const accounts = await sbGet("accounts", "active=eq.true&order=priority.desc");
   console.log(`Collecting from ${accounts.length} accounts...`);
 

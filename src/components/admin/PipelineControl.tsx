@@ -43,7 +43,7 @@ const STEPS = [
   {
     id: "process",
     label: "Process Events",
-    description: "Run Gemini AI classification on unprocessed tweets",
+    description: "Run Groq AI classification on unprocessed tweets",
     icon: Cpu,
     endpoint: "/api/pipeline/process",
     color: "text-violet-400",
@@ -208,7 +208,7 @@ export function PipelineControl({ stats }: { stats: Stats }) {
 
 function formatResult(id: string, data: Record<string, unknown>): string {
   if (id === "collect") return `Collected ${data.collected} tweets from ${data.accounts} accounts (${data.skipped} noise filtered)`;
-  if (id === "process") return `Processed ${data.processed} tweets → ${data.events_created} new events created`;
+  if (id === "process") return `Processed ${data.processed} tweets → ${data.events_created} new events, ${data.clustered} clustered, ${data.below_threshold} low-signal, ${data.groq_failed} Groq failures`;
   if (id === "summarize") return `Summary generated from ${data.event_count} events`;
   if (id === "ideas") return `${data.ideas_created} content ideas created`;
   return JSON.stringify(data);

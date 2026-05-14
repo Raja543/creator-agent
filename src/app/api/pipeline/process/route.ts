@@ -5,13 +5,23 @@ import { isCronAuthorized } from "@/lib/cron-auth";
 export const maxDuration = 300;
 
 const IMPORTANCE_THRESHOLD = 4;
-const BATCH_SIZE = 20; // keep within Groq free tier rate limits
+const BATCH_SIZE = 30;
 
 export function GET(request: Request) {
   if (!isCronAuthorized(request)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
   return POST();
+}
+
+async function classifyWithRetry(content: string) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const result = await classifyTweet(content);
+    if (result) return result;
+    // Wait longer on each retry — likely a rate limit
+    await new Promise((r) => setTimeout(r, 3000 * (attempt + 1)));
+  }
+  return null;
 }
 
 export async function POST() {
@@ -27,6 +37,9 @@ export async function POST() {
   }
 
   let eventsCreated = 0;
+  let clustered = 0;
+  let belowThreshold = 0;
+  let failed = 0;
   let processed = 0;
 
   for (const tweet of tweets) {
@@ -35,20 +48,23 @@ export async function POST() {
       continue;
     }
 
-    const classification = await classifyTweet(tweet.content);
+    const classification = await classifyWithRetry(tweet.content);
 
-    // Mark as processed regardless of outcome
     await supabase.from("tweets").update({ processed: true }).eq("id", tweet.id);
     processed++;
 
-    if (!classification || !classification.important || classification.importance_score < IMPORTANCE_THRESHOLD) {
+    if (!classification) {
+      failed++;
       continue;
     }
 
-    // Determine ecosystem from raw_data metadata
+    if (!classification.important || classification.importance_score < IMPORTANCE_THRESHOLD) {
+      belowThreshold++;
+      continue;
+    }
+
     const ecosystem = (tweet.raw_data as Record<string, string> | null)?.account_ecosystem ?? null;
 
-    // Check for a similar recent event to cluster with (last 24h, same ecosystem + category)
     const { data: existingEvents } = await supabase
       .from("events")
       .select("id, title, source_tweets, keywords")
@@ -59,14 +75,12 @@ export async function POST() {
       .limit(5);
 
     const clusterTarget = existingEvents?.find((e) => {
-      // Cluster if 2+ keywords overlap with the existing event
       const existingKeywords: string[] = (e.keywords as string[]) ?? [];
       const overlap = classification.keywords.filter((k) => existingKeywords.includes(k));
       return overlap.length >= 2;
     });
 
     if (clusterTarget) {
-      // Add tweet to existing event's source_tweets
       const sourceTweets = (clusterTarget.source_tweets as object[] | null) ?? [];
       await supabase
         .from("events")
@@ -80,11 +94,11 @@ export async function POST() {
 
       await supabase.from("activities").insert({
         type: "event_clustered",
-        message: `Tweet from @${tweet.username} clustered into existing event: "${clusterTarget.title}"`,
+        message: `Tweet from @${tweet.username} clustered into: "${clusterTarget.title}"`,
         metadata: { event_id: clusterTarget.id, tweet_id: tweet.tweet_id },
       });
+      clustered++;
     } else {
-      // Create new event
       const { data: newEvent } = await supabase
         .from("events")
         .insert({
@@ -105,15 +119,22 @@ export async function POST() {
         eventsCreated++;
         await supabase.from("activities").insert({
           type: "event_detected",
-          message: `New event detected [${ecosystem} | ${classification.category} | score ${classification.importance_score}]: ${classification.summary}`,
+          message: `New event [${ecosystem} | ${classification.category} | score ${classification.importance_score}]: ${classification.summary}`,
           metadata: { event_id: newEvent.id, score: classification.importance_score, ecosystem },
         });
       }
     }
 
-    // Groq free tier: ~30 req/min — 2s delay keeps us safe
+    // Groq free tier: 30 req/min — 2s gap keeps us well within limits
     await new Promise((r) => setTimeout(r, 2000));
   }
 
-  return Response.json({ processed, events_created: eventsCreated, tweets_total: tweets.length });
+  return Response.json({
+    processed,
+    events_created: eventsCreated,
+    clustered,
+    below_threshold: belowThreshold,
+    groq_failed: failed,
+    tweets_total: tweets.length,
+  });
 }
