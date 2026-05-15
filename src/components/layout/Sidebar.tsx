@@ -17,6 +17,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 
@@ -217,18 +218,32 @@ export function Sidebar() {
         <Menu className="size-4" />
       </button>
 
-      {/* ── Mobile: backdrop ── */}
-      <div
-        className={`fixed inset-0 bg-black/60 z-40 md:hidden transition-opacity duration-200 ${mobileOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
-        onClick={() => setMobileOpen(false)}
-      />
-
-      {/* ── Mobile: drawer ── */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-sidebar border-r border-sidebar-border md:hidden transition-transform duration-300 ease-in-out ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
-      >
-        <SidebarContent onClose={() => setMobileOpen(false)} />
-      </aside>
+      {/* ── Mobile: backdrop + drawer ── */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/60 z-40 md:hidden"
+              onClick={() => setMobileOpen(false)}
+            />
+            <motion.aside
+              key="drawer"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 260 }}
+              className="fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-sidebar border-r border-sidebar-border md:hidden"
+            >
+              <SidebarContent onClose={() => setMobileOpen(false)} />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 }
