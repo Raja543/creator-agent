@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { Clock, Trash2, Inbox, ChevronRight } from "lucide-react";
+import { Clock, Trash2, Inbox, ChevronRight, ChevronLeft } from "lucide-react";
 import type { ContentIdea, PipelineStatus } from "@/lib/database.types";
 
 interface Stage {
@@ -117,6 +117,22 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
     });
   }
 
+  async function moveToPrevStage(card: ContentIdea) {
+    const currentIdx = stages.findIndex((s) => s.id === card.status);
+    if (currentIdx <= 0) return;
+    const prevStage = stages[currentIdx - 1].id;
+    setGrouped((prev) => ({
+      ...prev,
+      [card.status]: (prev[card.status] ?? []).filter((i) => i.id !== card.id),
+      [prevStage]: [...(prev[prevStage] ?? []), { ...card, status: prevStage }],
+    }));
+    await fetch(`/api/ideas/${card.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: prevStage }),
+    });
+  }
+
   const totalCards = Object.values(grouped).reduce((sum, col) => sum + (col?.length ?? 0), 0);
 
   if (!mounted) {
@@ -145,8 +161,9 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
 
       {/* ── Mobile: tab-based single column ── */}
       <div className="md:hidden">
-        {/* Stage tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-none">
+        {/* Stage tabs — scrollable with fade hint */}
+        <div className="relative mb-4">
+        <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-none">
           {stages.map((stage) => {
             const count = grouped[stage.id]?.length ?? 0;
             return (
@@ -167,12 +184,15 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
             );
           })}
         </div>
+        <div className="absolute right-0 top-0 bottom-3 w-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+        </div>
 
         {/* Active stage cards */}
         {(() => {
           const cards = grouped[activeStage] ?? [];
           const currentStageIdx = stages.findIndex((s) => s.id === activeStage);
           const nextStage = stages[currentStageIdx + 1];
+          const prevStage = stages[currentStageIdx - 1];
           return cards.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3 bg-card border border-border rounded-xl">
               <Inbox className="size-8 text-muted-foreground opacity-40" />
@@ -195,27 +215,38 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="size-3" />
-                      {formatRelative(card.created_at)}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {nextStage && (
-                        <button
-                          onClick={() => moveToNextStage(card)}
-                          className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
-                        >
-                          Move to {nextStage.label}
-                          <ChevronRight className="size-3" />
-                        </button>
-                      )}
+                  <div className="pt-3 border-t border-border/50 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="size-3" />
+                        {formatRelative(card.created_at)}
+                      </div>
                       <button
                         onClick={() => deleteIdea(card.id, card.status)}
                         className="p-1 rounded text-muted-foreground/50 hover:text-destructive transition-colors"
                       >
                         <Trash2 className="size-3.5" />
                       </button>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      {prevStage ? (
+                        <button
+                          onClick={() => moveToPrevStage(card)}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-medium transition-colors"
+                        >
+                          <ChevronLeft className="size-3" />
+                          {prevStage.label}
+                        </button>
+                      ) : <span />}
+                      {nextStage && (
+                        <button
+                          onClick={() => moveToNextStage(card)}
+                          className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+                        >
+                          {nextStage.label}
+                          <ChevronRight className="size-3" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

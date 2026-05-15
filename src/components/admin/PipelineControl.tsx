@@ -138,9 +138,15 @@ export function PipelineControl({ stats }: { stats: Stats }) {
         className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
       >
         {fullRunning ? (
-          <><Loader2 className="size-4 animate-spin" /> Running full pipeline...</>
+          <><Loader2 className="size-4 shrink-0 animate-spin" /> Running full pipeline...</>
         ) : (
-          <><Play className="size-4" /> Run Full Pipeline (Collect → Process → Summarize → Ideas)</>
+          <>
+            <Play className="size-4 shrink-0" />
+            <span>Run Full Pipeline</span>
+            <span className="hidden sm:inline text-primary-foreground/70 text-sm">
+              (Collect → Process → Summarize → Ideas)
+            </span>
+          </>
         )}
       </button>
 

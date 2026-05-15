@@ -30,7 +30,8 @@ export default async function PipelinePage() {
           <span className="bg-gradient-to-r from-cyan-400 to-cyan-400/60 bg-clip-text text-transparent">Pipeline</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Drag cards between columns to update status
+          <span className="hidden md:inline">Drag cards between columns to update status</span>
+          <span className="md:hidden">Tap a stage to view and move cards</span>
         </p>
       </div>
       <PipelineClient stages={STAGES} initialGrouped={grouped ?? {}} />

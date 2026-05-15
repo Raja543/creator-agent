@@ -149,18 +149,18 @@ export default async function AdminPage() {
       </div>
 
       {/* Ecosystem breakdown */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-3">
         {ecosystems.map((eco) => {
           const [textColor, bgColor] = eco.color.split(" ");
           return (
-            <div key={eco.label} className={`relative rounded-xl p-5 overflow-hidden border border-border ${bgColor}`}>
+            <div key={eco.label} className={`relative rounded-xl p-3 md:p-5 overflow-hidden border border-border ${bgColor}`}>
               <div className={`absolute -top-3 -right-3 size-14 rounded-full blur-xl opacity-30 ${eco.glow}`} />
               <div className="relative">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className={`size-2 rounded-full ${eco.dot}`} />
-                  <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{eco.label}</span>
+                <div className="flex items-center gap-1.5 mb-2 md:mb-3">
+                  <div className={`size-2 shrink-0 rounded-full ${eco.dot}`} />
+                  <span className="text-[10px] md:text-xs font-bold uppercase tracking-wide md:tracking-widest text-muted-foreground truncate">{eco.label}</span>
                 </div>
-                <p className={`text-4xl font-black ${textColor}`}>{eco.count}</p>
+                <p className={`text-2xl md:text-4xl font-black ${textColor}`}>{eco.count}</p>
                 <p className="text-xs text-muted-foreground mt-1">accounts</p>
               </div>
             </div>
