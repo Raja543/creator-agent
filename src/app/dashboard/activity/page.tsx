@@ -16,61 +16,70 @@ import type { ActivityType } from "@/lib/database.types";
 
 const ACTIVITY_CONFIG: Record<
   ActivityType,
-  { icon: React.ElementType; label: string; color: string; bg: string }
+  { icon: React.ElementType; label: string; color: string; bg: string; glow: string }
 > = {
   source_added: {
     icon: Radio,
     label: "Source Added",
     color: "text-blue-400",
-    bg: "bg-blue-400/10",
+    bg: "bg-gradient-to-br from-blue-400/20 to-blue-400/5",
+    glow: "bg-blue-400",
   },
   source_updated: {
     icon: Radio,
     label: "Source Updated",
     color: "text-blue-400",
-    bg: "bg-blue-400/10",
+    bg: "bg-gradient-to-br from-blue-400/20 to-blue-400/5",
+    glow: "bg-blue-400",
   },
   event_detected: {
     icon: Zap,
     label: "Event Detected",
     color: "text-violet-400",
-    bg: "bg-violet-400/10",
+    bg: "bg-gradient-to-br from-violet-400/20 to-violet-400/5",
+    glow: "bg-violet-400",
   },
   event_clustered: {
     icon: Zap,
     label: "Events Clustered",
     color: "text-violet-400",
-    bg: "bg-violet-400/10",
+    bg: "bg-gradient-to-br from-violet-400/20 to-violet-400/5",
+    glow: "bg-violet-400",
   },
   idea_generated: {
     icon: Lightbulb,
     label: "Idea Generated",
     color: "text-amber-400",
-    bg: "bg-amber-400/10",
+    bg: "bg-gradient-to-br from-amber-400/20 to-amber-400/5",
+    glow: "bg-amber-400",
   },
   pipeline_moved: {
     icon: Columns3,
     label: "Pipeline Moved",
     color: "text-cyan-400",
-    bg: "bg-cyan-400/10",
+    bg: "bg-gradient-to-br from-cyan-400/20 to-cyan-400/5",
+    glow: "bg-cyan-400",
   },
   summary_generated: {
     icon: FileText,
     label: "Summary Generated",
     color: "text-green-400",
-    bg: "bg-green-400/10",
+    bg: "bg-gradient-to-br from-green-400/20 to-green-400/5",
+    glow: "bg-green-400",
   },
   tweet_collected: {
     icon: MessageSquare,
     label: "Tweet Collected",
     color: "text-sky-400",
-    bg: "bg-sky-400/10",
+    bg: "bg-gradient-to-br from-sky-400/20 to-sky-400/5",
+    glow: "bg-sky-400",
   },
   system: {
     icon: Settings,
     label: "System",
     color: "text-muted-foreground",
     bg: "bg-muted",
+    glow: "bg-muted",
   },
 };
 
@@ -79,6 +88,7 @@ const DEFAULT_CONFIG = {
   label: "Activity",
   color: "text-muted-foreground",
   bg: "bg-muted",
+  glow: "bg-muted",
 };
 
 function parseUTC(iso: string): Date {
@@ -140,9 +150,9 @@ export default async function ActivityPage() {
   const groups = groupByDate(activities);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">Activity Feed</h1>
+        <h1 className="text-2xl font-black text-foreground">Activity Feed</h1>
         <p className="text-sm text-muted-foreground mt-1">System events and pipeline changes</p>
       </div>
 
@@ -153,28 +163,33 @@ export default async function ActivityPage() {
       )}
 
       {activities.length === 0 ? (
-        <div className="bg-card border border-border rounded-xl py-24 flex flex-col items-center gap-3">
-          <div className="size-14 rounded-full bg-muted flex items-center justify-center">
-            <Activity className="size-6 text-muted-foreground" />
+        <div className="bg-card border border-border rounded-xl py-24 flex flex-col items-center gap-4">
+          <div className="size-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+            <Activity className="size-7 text-primary" />
           </div>
-          <p className="text-sm font-medium text-foreground">No activity yet</p>
-          <p className="text-xs text-muted-foreground max-w-xs text-center">
-            Activity will appear here as the system collects data, detects events, and generates content ideas.
-          </p>
+          <div className="text-center">
+            <p className="text-base font-bold text-foreground">No activity yet</p>
+            <p className="text-sm text-muted-foreground mt-1.5 max-w-xs">
+              Activity appears as the system collects data, detects events, and generates content ideas.
+            </p>
+          </div>
         </div>
       ) : (
         <div className="space-y-8">
           {Array.from(groups.entries()).map(([dateLabel, items]) => (
             <div key={dateLabel}>
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+              {/* Date header */}
+              <div className="flex items-center gap-3 mb-5">
+                <span className="text-xs font-black uppercase tracking-widest text-foreground bg-card border border-border px-3 py-1 rounded-full">
                   {dateLabel}
                 </span>
                 <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-muted-foreground">{items.length}</span>
+                <span className="text-xs font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                  {items.length}
+                </span>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {items.map((activity, index) => {
                   const config = activity.type
                     ? (ACTIVITY_CONFIG[activity.type] ?? DEFAULT_CONFIG)
@@ -183,29 +198,28 @@ export default async function ActivityPage() {
                   const isLast = index === items.length - 1;
 
                   return (
-                    <div key={activity.id} className="flex items-start gap-4 group">
+                    <div key={activity.id} className="flex items-start gap-4">
                       <div className="flex flex-col items-center shrink-0">
-                        <div className={`size-8 rounded-lg ${config.bg} flex items-center justify-center`}>
-                          <Icon className={`size-3.5 ${config.color}`} />
+                        <div className={`relative size-10 rounded-xl ${config.bg} flex items-center justify-center overflow-hidden`}>
+                          <div className={`absolute inset-0 opacity-0 ${config.glow} blur-sm`} />
+                          <Icon className={`relative size-4 ${config.color}`} />
                         </div>
                         {!isLast && (
-                          <div className="w-px flex-1 bg-border mt-1 min-h-4" />
+                          <div className="w-px flex-1 bg-gradient-to-b from-border to-transparent mt-1 min-h-5" />
                         )}
                       </div>
 
-                      <div className="flex-1 min-w-0 pb-3">
+                      <div className="flex-1 min-w-0 pb-4 pt-1.5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`text-[10px] font-semibold uppercase tracking-wide ${config.color}`}>
-                                {config.label}
-                              </span>
-                            </div>
+                            <span className={`text-xs font-bold uppercase tracking-wide ${config.color}`}>
+                              {config.label}
+                            </span>
                             <p className="text-sm text-foreground mt-0.5 leading-relaxed">
                               {activity.message ?? "No message"}
                             </p>
                           </div>
-                          <span className="text-[11px] text-muted-foreground shrink-0 mt-0.5 tabular-nums">
+                          <span className="text-xs text-muted-foreground shrink-0 tabular-nums whitespace-nowrap">
                             {formatTime(activity.created_at)}
                           </span>
                         </div>

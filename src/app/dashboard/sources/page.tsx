@@ -3,6 +3,8 @@ import { SourcesClient } from "@/components/sources/SourcesClient";
 import Link from "next/link";
 import type { Ecosystem } from "@/lib/database.types";
 
+export const dynamic = "force-dynamic";
+
 const ECOSYSTEM_TABS: { value: string; label: string }[] = [
   { value: "all", label: "All" },
   { value: "ronin", label: "Ronin" },
@@ -31,7 +33,7 @@ export default async function SourcesPage({ searchParams }: PageProps) {
   const sources = data ?? [];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex items-center gap-3 border-b border-border pb-5">
         {ECOSYSTEM_TABS.map((tab) => (
           <Link
@@ -54,7 +56,7 @@ export default async function SourcesPage({ searchParams }: PageProps) {
         </div>
       )}
 
-      <SourcesClient initialSources={sources} activeFilter={activeFilter} />
+      <SourcesClient key={activeFilter} initialSources={sources} activeFilter={activeFilter} />
     </div>
   );
 }

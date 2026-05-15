@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Plus, Pencil, Trash2, X, Check, AlertTriangle } from "lucide-react";
+import { useState, useCallback, useMemo } from "react";
+import { Plus, Pencil, Trash2, X, Check, AlertTriangle, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import type { Account, Ecosystem, AccountCategory } from "@/lib/database.types";
 
 const ECOSYSTEMS: { value: Ecosystem; label: string }[] = [
@@ -24,9 +25,9 @@ const CATEGORIES: { value: AccountCategory; label: string }[] = [
 ];
 
 const ECOSYSTEM_COLORS: Record<string, string> = {
-  ronin: "bg-blue-400/15 text-blue-400",
-  immutable: "bg-cyan-400/15 text-cyan-400",
-  abstract: "bg-violet-400/15 text-violet-400",
+  ronin: "bg-sky-400/15 text-sky-400",
+  immutable: "bg-purple-400/15 text-purple-400",
+  abstract: "bg-emerald-400/15 text-emerald-400",
   other: "bg-muted text-muted-foreground",
 };
 
@@ -45,6 +46,13 @@ function getPriorityColor(priority: number) {
   if (priority >= 8) return "bg-green-400";
   if (priority >= 5) return "bg-amber-400";
   return "bg-muted-foreground";
+}
+
+function getEcoAvatar(ecosystem: string | null | undefined): string {
+  if (ecosystem === "ronin") return "bg-sky-400/20 text-sky-400";
+  if (ecosystem === "immutable") return "bg-purple-400/20 text-purple-400";
+  if (ecosystem === "abstract") return "bg-emerald-400/20 text-emerald-400";
+  return "bg-primary/15 text-primary";
 }
 
 function parseUTC(iso: string): Date {
@@ -258,8 +266,18 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
   const [editTarget, setEditTarget] = useState<Account | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  const displayed = useMemo(() => {
+    if (!search.trim()) return sources;
+    const q = search.toLowerCase();
+    return sources.filter(
+      (s) =>
+        s.username.toLowerCase().includes(q) ||
+        (s.display_name ?? "").toLowerCase().includes(q)
+    );
+  }, [sources, search]);
 
   const refresh = useCallback(async () => {
     const params = new URLSearchParams();
@@ -273,7 +291,6 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
 
   async function handleAdd(form: FormData) {
     setSubmitting(true);
-    setError(null);
     try {
       const res = await fetch("/api/sources", {
         method: "POST",
@@ -295,8 +312,9 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
       const newAccount: Account = await res.json();
       setSources((prev) => [newAccount, ...prev]);
       setShowAdd(false);
+      toast.success(`@${newAccount.username} added`);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Unknown error");
+      toast.error(e instanceof Error ? e.message : "Failed to add source");
     } finally {
       setSubmitting(false);
     }
@@ -305,7 +323,6 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
   async function handleEdit(form: FormData) {
     if (!editTarget) return;
     setSubmitting(true);
-    setError(null);
     try {
       const res = await fetch(`/api/sources/${editTarget.id}`, {
         method: "PUT",
@@ -327,8 +344,9 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
       const updated: Account = await res.json();
       setSources((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
       setEditTarget(null);
+      toast.success("Source updated");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Unknown error");
+      toast.error(e instanceof Error ? e.message : "Failed to update source");
     } finally {
       setSubmitting(false);
     }
@@ -337,7 +355,6 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
   async function handleDelete() {
     if (!deleteTarget) return;
     setSubmitting(true);
-    setError(null);
     try {
       const res = await fetch(`/api/sources/${deleteTarget.id}`, { method: "DELETE" });
       if (!res.ok) {
@@ -345,9 +362,10 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
         throw new Error(d.error ?? "Failed to delete source");
       }
       setSources((prev) => prev.filter((s) => s.id !== deleteTarget.id));
+      toast.success(`@${deleteTarget.username} removed`);
       setDeleteTarget(null);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Unknown error");
+      toast.error(e instanceof Error ? e.message : "Failed to delete source");
     } finally {
       setSubmitting(false);
     }
@@ -364,6 +382,7 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
       if (res.ok) {
         const updated: Account = await res.json();
         setSources((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+        toast.success(updated.active ? "Source activated" : "Source paused");
       }
     } finally {
       setTogglingId(null);
@@ -372,25 +391,37 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold text-foreground">Sources</h1>
           <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
             {sources.length}
           </span>
         </div>
-        <Button size="sm" onClick={() => { setError(null); setShowAdd(true); }}>
+        <Button size="sm" onClick={() => setShowAdd(true)}>
           <Plus className="size-3.5" />
           Add Source
         </Button>
       </div>
 
-      {error && (
-        <div className="mb-4 flex items-center gap-2 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg px-4 py-3">
-          <AlertTriangle className="size-4 shrink-0" />
-          {error}
-        </div>
-      )}
+      {/* Search */}
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by username or display name…"
+          className="w-full bg-input border border-border rounded-lg pl-10 pr-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="size-4" />
+          </button>
+        )}
+      </div>
 
       {sources.length === 0 ? (
         <div className="bg-card border border-border rounded-xl py-20 flex flex-col items-center gap-3">
@@ -404,87 +435,135 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
           </Button>
         </div>
       ) : (
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
+        <>
+          {/* Mobile: card list */}
+          <div className="md:hidden space-y-3">
+            {displayed.map((source) => (
+              <div key={source.id} className="bg-card border border-border rounded-xl p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className={`size-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${getEcoAvatar(source.ecosystem)}`}>
+                      {source.username.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-foreground">@{source.username}</p>
+                      {source.display_name && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{source.display_name}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => { setEditTarget(source); }}
+                      className="p-2 rounded-lg bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Pencil className="size-3.5" />
+                    </button>
+                    <button
+                      onClick={() => { setDeleteTarget(source); }}
+                      className="p-2 rounded-lg bg-muted text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {source.ecosystem && (
+                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${ECOSYSTEM_COLORS[source.ecosystem] ?? ECOSYSTEM_COLORS.other}`}>
+                      {source.ecosystem}
+                    </span>
+                  )}
+                  {source.category && (
+                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${CATEGORY_COLORS[source.category] ?? "bg-muted text-muted-foreground"}`}>
+                      {source.category.replace("_", " ")}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-3 pt-1 border-t border-border">
+                  <div className="flex items-center gap-2 flex-1">
+                    <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${getPriorityColor(source.priority)}`} style={{ width: `${source.priority * 10}%` }} />
+                    </div>
+                    <span className="text-xs text-muted-foreground">{source.priority}/10</span>
+                  </div>
+                  <button
+                    onClick={() => toggleActive(source)}
+                    disabled={togglingId === source.id}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors disabled:opacity-50 ${source.active ? "bg-primary" : "bg-muted"}`}
+                  >
+                    <span className={`pointer-events-none inline-block size-4 rounded-full bg-white shadow transition-transform ${source.active ? "translate-x-4" : "translate-x-0"}`} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden md:block bg-card border border-border rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wide px-4 py-3">Username</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wide px-4 py-3">Display Name</th>
                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wide px-4 py-3">Ecosystem</th>
                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wide px-4 py-3">Category</th>
                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wide px-4 py-3">Priority</th>
                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wide px-4 py-3">Status</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wide px-4 py-3">Last Checked</th>
                   <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wide px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {sources.map((source) => (
+                {displayed.map((source) => (
                   <tr key={source.id} className="hover:bg-muted/30 transition-colors group">
                     <td className="px-4 py-3">
-                      <span className="font-mono text-xs text-muted-foreground">@</span>
-                      <span className="font-medium text-foreground">{source.username}</span>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {source.display_name ?? <span className="text-muted-foreground/40 italic text-xs">—</span>}
+                      <div className="flex items-center gap-2.5">
+                        <div className={`size-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${getEcoAvatar(source.ecosystem)}`}>
+                          {source.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">@{source.username}</p>
+                          {source.display_name && <p className="text-xs text-muted-foreground">{source.display_name}</p>}
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       {source.ecosystem ? (
                         <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${ECOSYSTEM_COLORS[source.ecosystem] ?? ECOSYSTEM_COLORS.other}`}>
                           {source.ecosystem}
                         </span>
-                      ) : (
-                        <span className="text-muted-foreground/40 text-xs italic">—</span>
-                      )}
+                      ) : <span className="text-muted-foreground/40 text-xs">—</span>}
                     </td>
                     <td className="px-4 py-3">
                       {source.category ? (
                         <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${CATEGORY_COLORS[source.category] ?? "bg-muted text-muted-foreground"}`}>
                           {source.category.replace("_", " ")}
                         </span>
-                      ) : (
-                        <span className="text-muted-foreground/40 text-xs italic">—</span>
-                      )}
+                      ) : <span className="text-muted-foreground/40 text-xs">—</span>}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${getPriorityColor(source.priority)}`}
-                            style={{ width: `${source.priority * 10}%` }}
-                          />
+                          <div className={`h-full rounded-full ${getPriorityColor(source.priority)}`} style={{ width: `${source.priority * 10}%` }} />
                         </div>
-                        <span className="text-xs text-muted-foreground tabular-nums">{source.priority}</span>
+                        <span className="text-xs text-muted-foreground">{source.priority}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <button
                         onClick={() => toggleActive(source)}
                         disabled={togglingId === source.id}
-                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none disabled:opacity-50 ${source.active ? "bg-primary" : "bg-muted"}`}
-                        title={source.active ? "Click to deactivate" : "Click to activate"}
+                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors disabled:opacity-50 ${source.active ? "bg-primary" : "bg-muted"}`}
                       >
                         <span className={`pointer-events-none inline-block size-4 rounded-full bg-white shadow transition-transform ${source.active ? "translate-x-4" : "translate-x-0"}`} />
                       </button>
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {formatRelativeTime(source.last_checked)}
-                    </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => { setError(null); setEditTarget(source); }}
-                          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                          title="Edit"
-                        >
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => { setEditTarget(source); }} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
                           <Pencil className="size-3.5" />
                         </button>
-                        <button
-                          onClick={() => { setError(null); setDeleteTarget(source); }}
-                          className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                          title="Delete"
-                        >
+                        <button onClick={() => { setDeleteTarget(source); }} className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
                           <Trash2 className="size-3.5" />
                         </button>
                       </div>
@@ -494,7 +573,7 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
               </tbody>
             </table>
           </div>
-        </div>
+        </>
       )}
 
       {showAdd && (

@@ -24,9 +24,11 @@ export default async function PipelinePage() {
   ) as Record<PipelineStatus, typeof ideas>;
 
   return (
-    <div className="p-6 h-full flex flex-col">
+    <div className="p-4 md:p-6 h-full flex flex-col">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-foreground">Content Pipeline</h1>
+        <h1 className="text-2xl font-black text-foreground">
+          <span className="bg-gradient-to-r from-cyan-400 to-cyan-400/60 bg-clip-text text-transparent">Pipeline</span>
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Drag cards between columns to update status
         </p>

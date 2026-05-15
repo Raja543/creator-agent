@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
-import { Zap, Radio, Lightbulb, Activity, TrendingUp, Clock } from "lucide-react";
+import { Zap, Radio, Lightbulb, Activity, Clock } from "lucide-react";
 import Link from "next/link";
+import { ECO_BADGE } from "@/lib/ecosystem-colors";
 
 export const dynamic = "force-dynamic";
 
@@ -25,25 +26,14 @@ async function getRecentEvents() {
     .from("events")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(5);
+    .limit(8);
   return data ?? [];
 }
 
-async function getLatestSummary() {
-  const { data } = await supabase
-    .from("summaries")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
-  return data;
-}
-
 export default async function DashboardPage() {
-  const [stats, recentEvents, latestSummary] = await Promise.all([
+  const [stats, recentEvents] = await Promise.all([
     getStats(),
     getRecentEvents(),
-    getLatestSummary(),
   ]);
 
   const statCards = [
@@ -53,41 +43,50 @@ export default async function DashboardPage() {
       icon: Radio,
       href: "/dashboard/sources",
       color: "text-blue-400",
-      bg: "bg-blue-400/10",
+      bg: "bg-gradient-to-br from-blue-400/20 to-blue-400/5",
+      glow: "bg-blue-400",
     },
     {
       label: "Events Today",
       value: stats.eventCount,
       icon: Zap,
       href: "/dashboard/events",
-      color: "text-violet-400",
-      bg: "bg-violet-400/10",
+      color: "text-amber-400",
+      bg: "bg-gradient-to-br from-amber-400/20 to-amber-400/5",
+      glow: "bg-amber-400",
     },
     {
       label: "Content Ideas",
       value: stats.ideaCount,
       icon: Lightbulb,
       href: "/dashboard/ideas",
-      color: "text-amber-400",
-      bg: "bg-amber-400/10",
+      color: "text-violet-400",
+      bg: "bg-gradient-to-br from-violet-400/20 to-violet-400/5",
+      glow: "bg-violet-400",
     },
     {
-      label: "System Active",
-      value: "Live",
+      label: "System Status",
+      value: "live",
       icon: Activity,
       href: "/dashboard/activity",
       color: "text-green-400",
-      bg: "bg-green-400/10",
+      bg: "bg-gradient-to-br from-green-400/20 to-green-400/5",
+      glow: "bg-green-400",
     },
   ];
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
+    <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">Overview</h1>
+        <h1 className="text-2xl font-bold text-foreground">
+          Good morning,{" "}
+          <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            Creator
+          </span>
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Web3 gaming intelligence dashboard
+          Your Web3 gaming intelligence is running
         </p>
       </div>
 
@@ -97,62 +96,70 @@ export default async function DashboardPage() {
           <Link
             key={card.label}
             href={card.href}
-            className="bg-card border border-border rounded-xl p-4 hover:border-border/80 hover:bg-card/80 transition-colors group"
+            className="relative bg-card border border-border rounded-xl p-5 overflow-hidden hover:-translate-y-1 hover:shadow-xl hover:shadow-black/30 transition-all duration-200 group"
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className={`size-8 rounded-lg ${card.bg} flex items-center justify-center`}>
-                <card.icon className={`size-4 ${card.color}`} />
+            {/* Ambient glow */}
+            <div className={`absolute -top-4 -right-4 size-20 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity duration-300 ${card.glow}`} />
+
+            <div className="relative">
+              <div className={`size-10 rounded-xl ${card.bg} flex items-center justify-center mb-4`}>
+                <card.icon className={`size-5 ${card.color}`} />
               </div>
-              <TrendingUp className="size-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+              {card.value === "live" ? (
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="relative flex size-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full size-2.5 bg-green-400" />
+                  </span>
+                  <span className="text-3xl font-black text-green-400">Live</span>
+                </div>
+              ) : (
+                <p className={`text-4xl font-black ${card.color}`}>{card.value}</p>
+              )}
+              <p className="text-xs font-medium text-muted-foreground mt-1.5">{card.label}</p>
             </div>
-            <p className="text-2xl font-bold text-foreground">{card.value}</p>
-            <p className="text-xs text-muted-foreground mt-1">{card.label}</p>
           </Link>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Events */}
-        <div className="lg:col-span-2 bg-card border border-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-foreground">Recent Events</h2>
-            <Link href="/dashboard/events" className="text-xs text-primary hover:underline">
-              View all
+        <div className="lg:col-span-2 bg-card border border-border rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border">
+            <h2 className="font-bold text-foreground">Recent Events</h2>
+            <Link href="/dashboard/events" className="text-xs text-primary hover:underline font-medium">
+              View all →
             </Link>
           </div>
           {recentEvents.length === 0 ? (
-            <div className="text-center py-10">
-              <Zap className="size-8 text-muted-foreground mx-auto mb-3 opacity-50" />
-              <p className="text-sm text-muted-foreground">No events detected yet</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Events will appear here once the collection pipeline runs
-              </p>
+            <div className="text-center py-12 flex flex-col items-center gap-3">
+              <div className="size-12 rounded-2xl bg-gradient-to-br from-amber-400/20 to-amber-400/5 flex items-center justify-center">
+                <Zap className="size-5 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">No events yet</p>
+                <p className="text-xs text-muted-foreground mt-1 max-w-[200px] mx-auto">
+                  Run the pipeline to start collecting events.
+                </p>
+              </div>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="divide-y divide-border">
               {recentEvents.map((event) => (
-                <div key={event.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="size-2 rounded-full bg-primary mt-2 shrink-0" />
+                <div key={event.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/30 transition-colors">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{event.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{event.summary}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      {event.ecosystem && (
-                        <EcosystemBadge ecosystem={event.ecosystem} />
-                      )}
+                    <p className="text-sm font-semibold text-foreground truncate">{event.title}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {event.ecosystem && <EcosystemBadge ecosystem={event.ecosystem} />}
                       {event.category && (
-                        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full capitalize">
-                          {event.category}
-                        </span>
+                        <span className="text-xs text-muted-foreground capitalize">{event.category}</span>
                       )}
                     </div>
                   </div>
                   {event.importance_score && (
-                    <div className="shrink-0">
-                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${getScoreColor(event.importance_score)}`}>
-                        {event.importance_score}/10
-                      </span>
-                    </div>
+                    <span className={`shrink-0 text-sm font-black px-2.5 py-1 rounded-lg ${getScoreColor(event.importance_score)}`}>
+                      {event.importance_score}
+                    </span>
                   )}
                 </div>
               ))}
@@ -161,31 +168,28 @@ export default async function DashboardPage() {
         </div>
 
         {/* Activity Feed */}
-        <div className="bg-card border border-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-foreground">Activity</h2>
-            <Link href="/dashboard/activity" className="text-xs text-primary hover:underline">
-              View all
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border">
+            <h2 className="font-bold text-foreground">Activity</h2>
+            <Link href="/dashboard/activity" className="text-xs text-primary hover:underline font-medium">
+              View all →
             </Link>
           </div>
           {stats.activities.length === 0 ? (
-            <div className="text-center py-10">
-              <Activity className="size-8 text-muted-foreground mx-auto mb-3 opacity-50" />
-              <p className="text-sm text-muted-foreground">No activity yet</p>
+            <div className="text-center py-12 flex flex-col items-center gap-3">
+              <div className="size-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                <Activity className="size-5 text-primary" />
+              </div>
+              <p className="text-sm font-semibold text-foreground">No activity yet</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="divide-y divide-border">
               {stats.activities.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-2.5">
+                <div key={activity.id} className="flex items-start gap-3 px-5 py-3 hover:bg-muted/30 transition-colors">
                   <div className="size-1.5 rounded-full bg-primary mt-2 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-foreground leading-relaxed">{activity.message}</p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <Clock className="size-3 text-muted-foreground" />
-                      <p className="text-[10px] text-muted-foreground">
-                        {formatTime(activity.created_at)}
-                      </p>
-                    </div>
+                    <p className="text-xs text-foreground leading-relaxed line-clamp-2">{activity.message}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{formatTime(activity.created_at)}</p>
                   </div>
                 </div>
               ))}
@@ -193,42 +197,6 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
-
-      {/* Latest Summary */}
-      {latestSummary && (
-        <div className="bg-card border border-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-foreground">Latest Intelligence Report</h2>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Clock className="size-3" />
-              {formatTime(latestSummary.created_at)}
-            </div>
-          </div>
-          <div className="space-y-4">
-            {latestSummary.content.split(/\n\n(?=[A-Z]+\n)/).map((section: string) => {
-              const lines = section.trim().split("\n");
-              const heading = lines[0];
-              const body = lines.slice(1).join("\n");
-              const headingColors: Record<string, string> = {
-                RONIN: "text-blue-400",
-                IMMUTABLE: "text-cyan-400",
-                ABSTRACT: "text-violet-400",
-                OVERALL: "text-amber-400",
-              };
-              return (
-                <div key={heading}>
-                  <p className={`text-xs font-bold uppercase tracking-widest mb-1.5 ${headingColors[heading] ?? "text-muted-foreground"}`}>
-                    {heading}
-                  </p>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                    {body}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Quick setup banner when no sources */}
       {stats.sourceCount === 0 && (
@@ -255,14 +223,8 @@ export default async function DashboardPage() {
 }
 
 function EcosystemBadge({ ecosystem }: { ecosystem: string }) {
-  const colors: Record<string, string> = {
-    ronin: "bg-blue-400/15 text-blue-400",
-    immutable: "bg-cyan-400/15 text-cyan-400",
-    abstract: "bg-violet-400/15 text-violet-400",
-    other: "bg-muted text-muted-foreground",
-  };
   return (
-    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full capitalize ${colors[ecosystem] ?? colors.other}`}>
+    <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full capitalize ${ECO_BADGE[ecosystem] ?? ECO_BADGE.other}`}>
       {ecosystem}
     </span>
   );

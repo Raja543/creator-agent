@@ -17,9 +17,9 @@ import {
 import type { Account, AccountInsert, Ecosystem, AccountCategory } from "@/lib/database.types";
 
 const ECOSYSTEMS: { value: Ecosystem; label: string; color: string }[] = [
-  { value: "ronin", label: "Ronin", color: "bg-blue-400/15 text-blue-400 border-blue-400/20" },
-  { value: "immutable", label: "Immutable", color: "bg-cyan-400/15 text-cyan-400 border-cyan-400/20" },
-  { value: "abstract", label: "Abstract", color: "bg-violet-400/15 text-violet-400 border-violet-400/20" },
+  { value: "ronin", label: "Ronin", color: "bg-sky-400/15 text-sky-400 border-sky-400/20" },
+  { value: "immutable", label: "Immutable", color: "bg-purple-400/15 text-purple-400 border-purple-400/20" },
+  { value: "abstract", label: "Abstract", color: "bg-emerald-400/15 text-emerald-400 border-emerald-400/20" },
   { value: "other", label: "Other", color: "bg-muted text-muted-foreground border-border" },
 ];
 
@@ -64,7 +64,6 @@ const PRESET_ACCOUNTS: Array<{
   { username: "themlpx",          display_name: "themlpx",                  ecosystem: "ronin", category: "creator",      priority: 7  },
   { username: "nixeniego",        display_name: "nixeniego",                ecosystem: "ronin", category: "creator",      priority: 6  },
   { username: "TheRoninRadio",    display_name: "The Ronin Radio",          ecosystem: "ronin", category: "media",        priority: 8  },
-  { username: "RoninGGs",         display_name: "RoninGGs",                 ecosystem: "ronin", category: "media",        priority: 7  },
 
   // ── IMMUTABLE ──────────────────────────────────────────────────
   { username: "Immutable",        display_name: "Immutable",                ecosystem: "immutable", category: "ecosystem",    priority: 10 },
@@ -92,7 +91,6 @@ const PRESET_ACCOUNTS: Array<{
   { username: "pudgypenguins",    display_name: "Pudgy Penguins",           ecosystem: "abstract", category: "official_game",priority: 10 },
   { username: "playgigaverse",    display_name: "Gigaverse",                ecosystem: "abstract", category: "official_game",priority: 9  },
   { username: "onchainheroes",    display_name: "Onchain Heroes",           ecosystem: "abstract", category: "official_game",priority: 9  },
-  { username: "Dogami",           display_name: "DOGAMÍ",                   ecosystem: "abstract", category: "official_game",priority: 8  },
   { username: "RoachRacingClub",  display_name: "Roach Racing Club",        ecosystem: "abstract", category: "official_game",priority: 7  },
   { username: "play_ember",       display_name: "Playember",                ecosystem: "abstract", category: "official_game",priority: 7  },
   { username: "unchained_game",   display_name: "Unchained",                ecosystem: "abstract", category: "official_game",priority: 8  },
@@ -111,6 +109,24 @@ const PRESET_ACCOUNTS: Array<{
   { username: "abstractdaily_",   display_name: "Abstract Daily",           ecosystem: "abstract", category: "media",        priority: 8  },
   { username: "Abstract_Hzn",     display_name: "Abstract Horizon",         ecosystem: "abstract", category: "media",        priority: 8  },
 ];
+
+function getEcoAvatar(ecosystem: string | null | undefined): string {
+  if (ecosystem === "ronin") return "bg-sky-400/20 text-sky-400";
+  if (ecosystem === "immutable") return "bg-purple-400/20 text-purple-400";
+  if (ecosystem === "abstract") return "bg-emerald-400/20 text-emerald-400";
+  return "bg-primary/15 text-primary";
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  official_game: "bg-green-400/15 text-green-400",
+  ecosystem: "bg-blue-400/15 text-blue-400",
+  founder: "bg-amber-400/15 text-amber-400",
+  creator: "bg-pink-400/15 text-pink-400",
+  analytics: "bg-cyan-400/15 text-cyan-400",
+  media: "bg-orange-400/15 text-orange-400",
+  guild: "bg-violet-400/15 text-violet-400",
+  influencer: "bg-rose-400/15 text-rose-400",
+};
 
 const EMPTY_FORM: Partial<AccountInsert> = {
   username: "",
@@ -689,8 +705,64 @@ function AccountTable({
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <div className="overflow-x-auto">
+    <>
+      {/* Mobile: card list */}
+      <div className="md:hidden space-y-3">
+        {accounts.map((account) => {
+          const eco = account.ecosystem ? ecoConfig[account.ecosystem] : null;
+          const cat = account.category ? catConfig[account.category] : null;
+          return (
+            <div key={account.id} className="bg-card border border-border rounded-xl p-4 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`size-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${getEcoAvatar(account.ecosystem)}`}>
+                    {account.username.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground text-sm">@{account.username}</p>
+                    {account.display_name && <p className="text-xs text-muted-foreground">{account.display_name}</p>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => onEdit(account)} className="p-2 rounded-lg bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                    <Edit2 className="size-3.5" />
+                  </button>
+                  <button onClick={() => onDelete(account.id)} className="p-2 rounded-lg bg-muted text-muted-foreground hover:text-destructive transition-colors">
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {eco && <span className={`text-xs px-2 py-0.5 rounded-full border ${eco.color}`}>{eco.label}</span>}
+                {cat && <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${CATEGORY_COLORS[account.category ?? ""] ?? "bg-muted text-muted-foreground"}`}>{cat.label}</span>}
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-border">
+                <div className="flex items-center gap-2">
+                  <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${account.priority >= 8 ? "bg-green-400" : account.priority >= 5 ? "bg-amber-400" : "bg-muted-foreground"}`}
+                      style={{ width: `${account.priority * 10}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground">{account.priority}/10</span>
+                </div>
+                <button onClick={() => onToggle(account)} className="flex items-center gap-1.5 text-xs">
+                  {account.active ? (
+                    <><CheckCircle2 className="size-3.5 text-green-400" /><span className="text-green-400">Active</span></>
+                  ) : (
+                    <><XCircle className="size-3.5 text-muted-foreground" /><span className="text-muted-foreground">Inactive</span></>
+                  )}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden md:block bg-card border border-border rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
@@ -710,95 +782,49 @@ function AccountTable({
                 <tr key={account.id} className="hover:bg-muted/20 transition-colors group">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="size-7 rounded-full bg-primary/15 flex items-center justify-center text-xs font-semibold text-primary shrink-0">
+                      <div className={`size-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${getEcoAvatar(account.ecosystem)}`}>
                         {account.username.charAt(0).toUpperCase()}
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
                           <p className="font-medium text-foreground">@{account.username}</p>
-                          <a
-                            href={`https://x.com/${account.username}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
+                          <a href={`https://x.com/${account.username}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                             <ExternalLink className="size-3" />
                           </a>
                         </div>
-                        {account.display_name && (
-                          <p className="text-xs text-muted-foreground">{account.display_name}</p>
-                        )}
-                        {account.notes && (
-                          <p className="text-[10px] text-muted-foreground/60 mt-0.5 max-w-48 truncate">{account.notes}</p>
-                        )}
+                        {account.display_name && <p className="text-xs text-muted-foreground">{account.display_name}</p>}
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    {eco ? (
-                      <span className={`text-xs px-2 py-0.5 rounded-full border ${eco.color}`}>
-                        {eco.label}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
+                    {eco ? <span className={`text-xs px-2 py-0.5 rounded-full border ${eco.color}`}>{eco.label}</span> : <span className="text-xs text-muted-foreground">—</span>}
                   </td>
                   <td className="px-4 py-3">
-                    {cat ? (
-                      <span className="text-xs text-muted-foreground">
-                        {cat.icon} {cat.label}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
+                    {cat ? <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${CATEGORY_COLORS[account.category ?? ""] ?? "bg-muted text-muted-foreground"}`}>{cat.label}</span> : <span className="text-xs text-muted-foreground">—</span>}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${
-                            account.priority >= 8
-                              ? "bg-green-400"
-                              : account.priority >= 5
-                              ? "bg-amber-400"
-                              : "bg-muted-foreground"
-                          }`}
-                          style={{ width: `${account.priority * 10}%` }}
-                        />
+                        <div className={`h-full rounded-full ${account.priority >= 8 ? "bg-green-400" : account.priority >= 5 ? "bg-amber-400" : "bg-muted-foreground"}`} style={{ width: `${account.priority * 10}%` }} />
                       </div>
                       <span className="text-xs text-muted-foreground">{account.priority}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => onToggle(account)}
-                      className="flex items-center gap-1.5 text-xs"
-                    >
+                    <button onClick={() => onToggle(account)} className="flex items-center gap-1.5 text-xs">
                       {account.active ? (
-                        <>
-                          <CheckCircle2 className="size-3.5 text-green-400" />
-                          <span className="text-green-400">Active</span>
-                        </>
+                        <><CheckCircle2 className="size-3.5 text-green-400" /><span className="text-green-400">Active</span></>
                       ) : (
-                        <>
-                          <XCircle className="size-3.5 text-muted-foreground" />
-                          <span className="text-muted-foreground">Inactive</span>
-                        </>
+                        <><XCircle className="size-3.5 text-muted-foreground" /><span className="text-muted-foreground">Inactive</span></>
                       )}
                     </button>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => onEdit(account)}
-                        className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                      >
+                      <button onClick={() => onEdit(account)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                         <Edit2 className="size-3.5" />
                       </button>
-                      <button
-                        onClick={() => onDelete(account.id)}
-                        className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      >
+                      <button onClick={() => onDelete(account.id)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
                         <Trash2 className="size-3.5" />
                       </button>
                     </div>
@@ -809,7 +835,7 @@ function AccountTable({
           </tbody>
         </table>
       </div>
-    </div>
+    </>
   );
 }
 
