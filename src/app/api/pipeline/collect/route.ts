@@ -39,6 +39,7 @@ export async function POST() {
   let collected = 0;
   let skipped = 0;
   let failed = 0;
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   // Fetch all active accounts ordered by priority
   const { data: accounts } = await supabase
@@ -57,6 +58,12 @@ export async function POST() {
 
       for (const tweet of tweets) {
         if (isNoise(tweet.content)) {
+          skipped++;
+          continue;
+        }
+
+        // Skip tweets older than 7 days
+        if (new Date(tweet.posted_at) < cutoff) {
           skipped++;
           continue;
         }

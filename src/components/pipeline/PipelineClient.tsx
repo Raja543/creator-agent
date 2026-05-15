@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { Clock, Trash2, Inbox, ChevronRight, ChevronLeft } from "lucide-react";
+import { Clock, Trash2, Inbox, ChevronRight, ChevronLeft, X, Pencil } from "lucide-react";
 import type { ContentIdea, PipelineStatus } from "@/lib/database.types";
 
 interface Stage {
@@ -64,6 +64,8 @@ function formatRelative(isoString: string) {
 export function PipelineClient({ stages, initialGrouped }: Props) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  const [viewTarget, setViewTarget] = useState<ContentIdea | null>(null);
 
   const [grouped, setGrouped] = useState<Record<string, ContentIdea[]>>(() =>
     Object.fromEntries(stages.map((s) => [s.id, initialGrouped[s.id] ?? []]))
@@ -201,7 +203,7 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
           ) : (
             <div className="space-y-3">
               {cards.map((card) => (
-                <div key={card.id} className={`bg-card border border-border border-l-2 rounded-xl p-4 ${POTENTIAL_BORDER[card.potential ?? "low"] ?? "border-l-border"}`}>
+                <div key={card.id} onClick={() => setViewTarget(card)} className={`bg-card border border-border border-l-2 rounded-xl p-4 cursor-pointer active:scale-[0.99] transition-transform ${POTENTIAL_BORDER[card.potential ?? "low"] ?? "border-l-border"}`}>
                   <p className="text-sm font-bold text-foreground leading-snug mb-3">{card.title}</p>
                   <div className="flex items-center gap-1.5 flex-wrap mb-3">
                     {card.format && (
@@ -222,7 +224,7 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
                         {formatRelative(card.created_at)}
                       </div>
                       <button
-                        onClick={() => deleteIdea(card.id, card.status)}
+                        onClick={(e) => { e.stopPropagation(); deleteIdea(card.id, card.status); }}
                         className="p-1 rounded text-muted-foreground/50 hover:text-destructive transition-colors"
                       >
                         <Trash2 className="size-3.5" />
@@ -231,7 +233,7 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
                     <div className="flex items-center justify-between gap-2">
                       {prevStage ? (
                         <button
-                          onClick={() => moveToPrevStage(card)}
+                          onClick={(e) => { e.stopPropagation(); moveToPrevStage(card); }}
                           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-medium transition-colors"
                         >
                           <ChevronLeft className="size-3" />
@@ -240,7 +242,7 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
                       ) : <span />}
                       {nextStage && (
                         <button
-                          onClick={() => moveToNextStage(card)}
+                          onClick={(e) => { e.stopPropagation(); moveToNextStage(card); }}
                           className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
                         >
                           {nextStage.label}
@@ -311,13 +313,23 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
                                   <Clock className="size-2.5" />
                                   {formatRelative(card.created_at)}
                                 </div>
-                                <button
-                                  onPointerDown={(e) => e.stopPropagation()}
-                                  onClick={() => deleteIdea(card.id, card.status)}
-                                  className="text-muted-foreground/50 hover:text-destructive transition-colors p-0.5 rounded"
-                                >
-                                  <Trash2 className="size-3" />
-                                </button>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onClick={(e) => { e.stopPropagation(); setViewTarget(card); }}
+                                    className="text-muted-foreground/50 hover:text-foreground transition-colors p-0.5 rounded"
+                                    title="View details"
+                                  >
+                                    <Pencil className="size-3" />
+                                  </button>
+                                  <button
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onClick={(e) => { e.stopPropagation(); deleteIdea(card.id, card.status); }}
+                                    className="text-muted-foreground/50 hover:text-destructive transition-colors p-0.5 rounded"
+                                  >
+                                    <Trash2 className="size-3" />
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           )}
@@ -338,6 +350,75 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
           })}
         </div>
       </DragDropContext>
+
+      {/* ── Idea detail modal ── */}
+      {viewTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setViewTarget(null)} />
+          <div className="relative z-10 bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                {viewTarget.format && (
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${FORMAT_COLORS[viewTarget.format] ?? "bg-muted text-muted-foreground"}`}>
+                    {viewTarget.format}
+                  </span>
+                )}
+                {viewTarget.potential && (
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full capitalize ${POTENTIAL_COLORS[viewTarget.potential] ?? "bg-muted text-muted-foreground"}`}>
+                    {viewTarget.potential}
+                  </span>
+                )}
+                {(() => {
+                  const stage = stages.find((s) => s.id === viewTarget.status);
+                  return stage ? (
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full capitalize ${stage.color} bg-muted/50`}>
+                      {stage.label}
+                    </span>
+                  ) : null;
+                })()}
+              </div>
+              <button onClick={() => setViewTarget(null)} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+              <h2 className="text-xl font-black text-foreground leading-snug">
+                {viewTarget.title ?? "Untitled Idea"}
+              </h2>
+
+              {viewTarget.description ? (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Description</p>
+                  <p className="text-sm text-foreground leading-relaxed">{viewTarget.description}</p>
+                </div>
+              ) : null}
+
+              {viewTarget.angle ? (
+                <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
+                  <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1.5">Angle</p>
+                  <p className="text-sm text-foreground leading-relaxed">{viewTarget.angle}</p>
+                </div>
+              ) : null}
+
+              {viewTarget.notes ? (
+                <div className="bg-muted/50 rounded-xl px-4 py-3">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Notes</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{viewTarget.notes}</p>
+                </div>
+              ) : null}
+
+              <div className="flex items-center gap-4 pt-1 text-xs text-muted-foreground flex-wrap">
+                <div className="flex items-center gap-1">
+                  <Clock className="size-3" />
+                  {formatRelative(viewTarget.created_at)}
+                </div>
+                <span>Priority {viewTarget.priority}/10</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
