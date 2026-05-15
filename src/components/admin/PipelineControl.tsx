@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Radio,
   Cpu,
@@ -70,6 +71,7 @@ const STEPS = [
 ];
 
 export function PipelineControl({ stats }: { stats: Stats }) {
+  const router = useRouter();
   const [results, setResults] = useState<Record<string, StepResult>>({});
   const [fullRunning, setFullRunning] = useState(false);
 
@@ -81,6 +83,7 @@ export function PipelineControl({ stats }: { stats: Stats }) {
       if (!res.ok) throw new Error(data.error ?? "Failed");
       const msg = data.message ?? formatResult(id, data);
       setResults((r) => ({ ...r, [id]: { status: "done", message: msg } }));
+      router.refresh();
     } catch (err) {
       setResults((r) => ({
         ...r,

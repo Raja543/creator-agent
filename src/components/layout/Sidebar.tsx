@@ -12,6 +12,7 @@ import {
   Settings,
   Shield,
   ChevronRight,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ const navItems = [
   { href: "/dashboard/sources", label: "Sources", icon: Radio },
   { href: "/dashboard/events", label: "Events", icon: Zap },
   { href: "/dashboard/ideas", label: "Ideas", icon: Lightbulb },
+  { href: "/dashboard/summaries", label: "Reports", icon: FileText },
   { href: "/dashboard/pipeline", label: "Pipeline", icon: Columns3 },
   { href: "/dashboard/activity", label: "Activity", icon: Activity },
 ];
