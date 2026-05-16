@@ -2,15 +2,20 @@
 // Runs directly in GitHub Actions (Azure IPs) — no Vercel, no proxies needed
 // Requires Node 18+ (native fetch). No npm install needed.
 
-// Load .env file if running locally
+// Load .env.local then .env if running locally
 import { readFileSync } from "fs";
-try {
-  const env = readFileSync(new URL("../.env", import.meta.url), "utf8");
-  for (const line of env.split("\n")) {
-    const [k, ...v] = line.split("=");
-    if (k && v.length) process.env[k.trim()] = v.join("=").trim();
-  }
-} catch {}
+import https from "https";
+import zlib from "zlib";
+for (const name of ["../.env.local", "../.env"]) {
+  try {
+    const env = readFileSync(new URL(name, import.meta.url), "utf8");
+    for (const line of env.split("\n")) {
+      const [k, ...v] = line.split("=");
+      if (k && v.length) process.env[k.trim()] = v.join("=").trim();
+    }
+    break;
+  } catch {}
+}
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -92,9 +97,14 @@ function parseItem(item, username) {
     item.match(/<guid>([\s\S]*?)<\/guid>/)?.[1] ?? "";
   const pubDate = item.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1] ?? "";
 
-  if (!title || !link || title.startsWith("RT by @")) return null;
+  if (!title || !link) return null;
 
-  const content = title
+  // Strip "RT by @username: " prefix — keep content, don't skip
+  const rawTitle = title.startsWith("RT by @")
+    ? title.replace(/^RT by @\w+:\s*/, "")
+    : title;
+
+  const content = rawTitle
     .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
     .trim();
@@ -109,15 +119,46 @@ function parseItem(item, username) {
   };
 }
 
-async function fetchRss(url) {
-  try {
-    const r = await fetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(12000) });
-    if (!r.ok) return null;
-    const text = await r.text();
-    return text.includes("<item>") ? text : null;
-  } catch {
-    return null;
-  }
+function fetchRss(url) {
+  return new Promise((resolve) => {
+    const parsed = new URL(url);
+    const options = {
+      hostname: parsed.hostname,
+      path: parsed.pathname + parsed.search,
+      headers: {
+        "User-Agent": UA,
+        "Accept": "application/rss+xml, application/xml, text/xml, */*",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Connection": "keep-alive",
+      },
+      timeout: 12000,
+    };
+    const req = https.get(options, (res) => {
+      if (res.statusCode !== 200) { res.resume(); return resolve(null); }
+      const chunks = [];
+      res.on("data", (c) => chunks.push(c));
+      res.on("end", () => {
+        const buf = Buffer.concat(chunks);
+        const enc = res.headers["content-encoding"] ?? "";
+        const decompress = enc.includes("br") ? zlib.brotliDecompress
+          : enc.includes("gzip") ? zlib.gunzip
+          : enc.includes("deflate") ? zlib.inflate
+          : null;
+        if (decompress) {
+          decompress(buf, (_err, result) => {
+            const text = result?.toString("utf8") ?? "";
+            resolve(text.includes("<item>") ? text : null);
+          });
+        } else {
+          const text = buf.toString("utf8");
+          resolve(text.includes("<item>") ? text : null);
+        }
+      });
+    });
+    req.on("error", () => resolve(null));
+    req.on("timeout", () => { req.destroy(); resolve(null); });
+  });
 }
 
 async function getTweets(username) {
@@ -146,11 +187,13 @@ async function main() {
   console.log(`Collecting from ${accounts.length} accounts...`);
 
   let collected = 0, skipped = 0, failed = 0;
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   for (const account of accounts) {
     try {
       const tweets = await getTweets(account.username);
       for (const tweet of tweets) {
+        if (new Date(tweet.posted_at) < cutoff) { skipped++; continue; }
         if (isNoise(tweet.content)) { skipped++; continue; }
         const ok = await sbUpsert("tweets", {
           tweet_id: tweet.tweet_id,
