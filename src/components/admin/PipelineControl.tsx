@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
 import {
   Radio,
   Cpu,
@@ -70,10 +69,23 @@ const STEPS = [
   },
 ];
 
-export function PipelineControl({ stats }: { stats: Stats }) {
-  const router = useRouter();
+export function PipelineControl({ stats: initialStats }: { stats: Stats }) {
+  const [stats, setStats] = useState<Stats>(initialStats);
   const [results, setResults] = useState<Record<string, StepResult>>({});
   const [fullRunning, setFullRunning] = useState(false);
+
+  const refreshStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/pipeline/stats");
+      if (res.ok) setStats(await res.json());
+    } catch {}
+  }, []);
+
+  // Poll every 30s while on the page
+  useEffect(() => {
+    const id = setInterval(refreshStats, 30_000);
+    return () => clearInterval(id);
+  }, [refreshStats]);
 
   async function runStep(endpoint: string, id: string) {
     setResults((r) => ({ ...r, [id]: { status: "running", message: "Running..." } }));
@@ -83,7 +95,7 @@ export function PipelineControl({ stats }: { stats: Stats }) {
       if (!res.ok) throw new Error(data.error ?? "Failed");
       const msg = data.message ?? formatResult(id, data);
       setResults((r) => ({ ...r, [id]: { status: "done", message: msg } }));
-      router.refresh();
+      await refreshStats();
     } catch (err) {
       setResults((r) => ({
         ...r,

@@ -1,6 +1,8 @@
 import { PipelineControl } from "@/components/admin/PipelineControl";
 import { supabase } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPipelinePage() {
   const [tweets, events, ideas, lastSummary] = await Promise.all([
     supabase.from("tweets").select("id", { count: "exact" }),
