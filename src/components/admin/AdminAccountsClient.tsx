@@ -77,7 +77,6 @@ const PRESET_ACCOUNTS: Array<{
   { username: "PlayElumia",       display_name: "Legends of Elumia",        ecosystem: "immutable", category: "official_game",priority: 8  },
   { username: "NomSteadGame",     display_name: "NomStead",                 ecosystem: "immutable", category: "official_game",priority: 8  },
   { username: "MedievalEmpires",  display_name: "Medieval Empires",         ecosystem: "immutable", category: "official_game",priority: 7  },
-  { username: "blockchaingamer",  display_name: "Blockchain Gamer",         ecosystem: "immutable", category: "creator",      priority: 9  },
   { username: "P2EGamerX",        display_name: "P2E Gamer X",              ecosystem: "immutable", category: "creator",      priority: 8  },
   { username: "ReadyPlayerRich",  display_name: "Ready Player Rich",        ecosystem: "immutable", category: "creator",      priority: 8  },
   { username: "Brycent_",         display_name: "Brycent",                  ecosystem: "immutable", category: "creator",      priority: 8  },
