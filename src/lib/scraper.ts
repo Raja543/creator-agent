@@ -44,10 +44,12 @@ function parseRssItem(item: string, username: string): ScrapedTweet | null {
 
   if (!title || !link) return null;
 
-  // Skip retweets
-  if (title.startsWith("RT by @")) return null;
+  // Strip "RT by @username: " prefix — keep the content, discard the wrapper
+  const rawTitle = title.startsWith("RT by @")
+    ? title.replace(/^RT by @\w+:\s*/, "")
+    : title;
 
-  const content = title
+  const content = rawTitle
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
