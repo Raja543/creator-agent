@@ -2,37 +2,39 @@
 
 import { useState, useMemo } from "react";
 import {
-  Plus,
-  Search,
-  Edit2,
-  Trash2,
-  X,
-  CheckCircle2,
-  XCircle,
-  Filter,
-  ChevronDown,
-  Users,
-  ExternalLink,
+  Plus, Search, Edit2, Trash2, X, CheckCircle2, XCircle,
+  Users, ExternalLink, ChevronDown,
 } from "lucide-react";
 import type { Account, AccountInsert, Ecosystem, AccountCategory } from "@/lib/database.types";
 
-const ECOSYSTEMS: { value: Ecosystem; label: string; color: string }[] = [
-  { value: "ronin", label: "Ronin", color: "bg-sky-400/15 text-sky-400 border-sky-400/20" },
-  { value: "immutable", label: "Immutable", color: "bg-purple-400/15 text-purple-400 border-purple-400/20" },
-  { value: "abstract", label: "Abstract", color: "bg-emerald-400/15 text-emerald-400 border-emerald-400/20" },
-  { value: "other", label: "Other", color: "bg-muted text-muted-foreground border-border" },
+const ECOSYSTEMS: { value: Ecosystem; label: string }[] = [
+  { value: "ronin",     label: "Ronin" },
+  { value: "immutable", label: "Immutable" },
+  { value: "abstract",  label: "Abstract" },
+  { value: "other",     label: "Other" },
 ];
 
 const CATEGORIES: { value: AccountCategory; label: string; icon: string }[] = [
   { value: "official_game", label: "Official Game", icon: "🎮" },
-  { value: "ecosystem", label: "Ecosystem", icon: "🌐" },
-  { value: "founder", label: "Founder", icon: "👤" },
-  { value: "creator", label: "Creator", icon: "✍️" },
-  { value: "analytics", label: "Analytics", icon: "📊" },
-  { value: "media", label: "Media", icon: "📰" },
-  { value: "guild", label: "Guild", icon: "🏰" },
-  { value: "influencer", label: "Influencer", icon: "📣" },
+  { value: "ecosystem",     label: "Ecosystem",     icon: "🌐" },
+  { value: "founder",       label: "Founder",       icon: "👤" },
+  { value: "creator",       label: "Creator",       icon: "✍️" },
+  { value: "analytics",     label: "Analytics",     icon: "📊" },
+  { value: "media",         label: "Media",         icon: "📰" },
+  { value: "guild",         label: "Guild",         icon: "🏰" },
+  { value: "influencer",    label: "Influencer",    icon: "📣" },
 ];
+
+const CATEGORY_CHIP: Record<string, string> = {
+  official_game: "signal",
+  ecosystem:     "ronin",
+  founder:       "amber",
+  creator:       "violet",
+  analytics:     "",
+  media:         "amber",
+  guild:         "violet",
+  influencer:    "rose",
+};
 
 const PRESET_ACCOUNTS: Array<{
   username: string;
@@ -109,39 +111,16 @@ const PRESET_ACCOUNTS: Array<{
   { username: "Abstract_Hzn",     display_name: "Abstract Horizon",         ecosystem: "abstract", category: "media",        priority: 8  },
 ];
 
-function getEcoAvatar(ecosystem: string | null | undefined): string {
-  if (ecosystem === "ronin") return "bg-sky-400/20 text-sky-400";
-  if (ecosystem === "immutable") return "bg-purple-400/20 text-purple-400";
-  if (ecosystem === "abstract") return "bg-emerald-400/20 text-emerald-400";
-  return "bg-primary/15 text-primary";
+function priorityColor(p: number): string {
+  return p >= 8 ? "var(--signal)" : p >= 5 ? "var(--amber)" : "var(--fg-5)";
 }
-
-const CATEGORY_COLORS: Record<string, string> = {
-  official_game: "bg-green-400/15 text-green-400",
-  ecosystem: "bg-blue-400/15 text-blue-400",
-  founder: "bg-amber-400/15 text-amber-400",
-  creator: "bg-pink-400/15 text-pink-400",
-  analytics: "bg-cyan-400/15 text-cyan-400",
-  media: "bg-orange-400/15 text-orange-400",
-  guild: "bg-violet-400/15 text-violet-400",
-  influencer: "bg-rose-400/15 text-rose-400",
-};
 
 const EMPTY_FORM: Partial<AccountInsert> = {
-  username: "",
-  display_name: "",
-  ecosystem: undefined,
-  category: undefined,
-  priority: 5,
-  active: true,
-  notes: "",
-  follower_count: undefined,
-  avatar_url: "",
+  username: "", display_name: "", ecosystem: undefined, category: undefined,
+  priority: 5, active: true, notes: "", follower_count: undefined, avatar_url: "",
 };
 
-interface Props {
-  initialAccounts: Account[];
-}
+interface Props { initialAccounts: Account[]; }
 
 export function AdminAccountsClient({ initialAccounts }: Props) {
   const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
@@ -167,8 +146,7 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
       const matchEco = filterEco === "all" || a.ecosystem === filterEco;
       const matchCat = filterCat === "all" || a.category === filterCat;
       const matchActive =
-        filterActive === "all" ||
-        (filterActive === "active" ? a.active : !a.active);
+        filterActive === "all" || (filterActive === "active" ? a.active : !a.active);
       return matchSearch && matchEco && matchCat && matchActive;
     });
   }, [accounts, search, filterEco, filterCat, filterActive]);
@@ -206,13 +184,9 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.username?.trim()) {
-      setError("Username is required");
-      return;
-    }
+    if (!form.username?.trim()) { setError("Username is required"); return; }
     setLoading(true);
     setError(null);
-
     try {
       if (editAccount) {
         const res = await fetch(`/api/sources/${editAccount.id}`, {
@@ -273,7 +247,6 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
         selectedPresets.has(p.username) &&
         !accounts.some((a) => a.username.toLowerCase() === p.username.toLowerCase())
     );
-
     setLoading(true);
     const created: Account[] = [];
     for (const preset of toAdd) {
@@ -294,20 +267,18 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
   const catConfig = Object.fromEntries(CATEGORIES.map((c) => [c.value, c]));
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <div className="cos-search-wrap flex-1">
+          <Search />
           <input
             type="text"
             placeholder="Search by username or name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-card border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
           />
         </div>
-
         <div className="flex gap-2 flex-wrap">
           <SelectFilter
             value={filterEco}
@@ -334,30 +305,26 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
               { value: "inactive", label: "Inactive" },
             ]}
           />
-
           <button
             onClick={() => setShowBulkPresets(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border rounded-lg text-sm text-foreground hover:border-border/60 transition-colors"
+            className="cos-btn-ghost"
+            style={{ fontSize: 12 }}
           >
-            <Users className="size-4" />
+            <Users style={{ width: 13, height: 13 }} />
             Presets
           </button>
-
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="size-4" />
+          <button onClick={openAdd} className="cos-btn-primary" style={{ fontSize: 12 }}>
+            <Plus style={{ width: 13, height: 13 }} />
             Add Account
           </button>
         </div>
       </div>
 
       {/* Stats bar */}
-      <div className="flex gap-4 flex-wrap text-xs text-muted-foreground">
+      <div style={{ display: "flex", gap: 10, fontFamily: "var(--font-geist-mono)", fontSize: 10.5, color: "var(--fg-4)", flexWrap: "wrap" }}>
         <span>{filtered.length} of {accounts.length} accounts</span>
         <span>·</span>
-        <span>{accounts.filter((a) => a.active).length} active</span>
+        <span style={{ color: "var(--signal)" }}>{accounts.filter((a) => a.active).length} active</span>
         {Object.entries(
           accounts.reduce<Record<string, number>>((acc, a) => {
             if (a.ecosystem) acc[a.ecosystem] = (acc[a.ecosystem] ?? 0) + 1;
@@ -368,7 +335,7 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
         ))}
       </div>
 
-      {/* Grouped by category view */}
+      {/* Grouped by category or flat */}
       {filterCat === "all" && filterEco === "all" && !search ? (
         <div className="space-y-6">
           {CATEGORIES.map((cat) => {
@@ -376,11 +343,11 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
             if (catAccounts.length === 0) return null;
             return (
               <div key={cat.value}>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-base">{cat.icon}</span>
-                  <h3 className="font-medium text-foreground">{cat.label}</h3>
-                  <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
-                    {catAccounts.length}
+                <div className="cos-divider">
+                  <span>{cat.icon}</span>
+                  {cat.label}
+                  <span style={{ color: "var(--fg-5)", fontFamily: "var(--font-geist-mono)", fontSize: 9.5 }}>
+                    ({catAccounts.length})
                   </span>
                 </div>
                 <AccountTable
@@ -394,17 +361,16 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
               </div>
             );
           })}
-          {/* Uncategorized */}
           {(() => {
             const uncat = filtered.filter((a) => !a.category);
             if (uncat.length === 0) return null;
             return (
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-base">❓</span>
-                  <h3 className="font-medium text-foreground">Uncategorized</h3>
-                  <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
-                    {uncat.length}
+                <div className="cos-divider">
+                  <span>❓</span>
+                  Uncategorized
+                  <span style={{ color: "var(--fg-5)", fontFamily: "var(--font-geist-mono)", fontSize: 9.5 }}>
+                    ({uncat.length})
                   </span>
                 </div>
                 <AccountTable
@@ -431,41 +397,31 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
       )}
 
       {accounts.length === 0 && (
-        <div className="text-center py-16 bg-card border border-border rounded-xl">
-          <Users className="size-10 text-muted-foreground mx-auto mb-4 opacity-40" />
-          <p className="font-medium text-foreground">No accounts yet</p>
-          <p className="text-sm text-muted-foreground mt-1 mb-4">
-            Add X accounts to start tracking ecosystems
-          </p>
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={() => setShowBulkPresets(true)}
-              className="px-4 py-2 bg-card border border-border rounded-lg text-sm text-foreground hover:border-primary/30 transition-colors"
-            >
-              Load presets
-            </button>
-            <button
-              onClick={openAdd}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-            >
-              Add manually
-            </button>
+        <div className="cos-card" style={{ padding: "48px 20px", textAlign: "center" }}>
+          <div style={{ width: 48, height: 48, borderRadius: 10, background: "var(--signal-dim)", color: "var(--signal)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <Users style={{ width: 22, height: 22 }} />
+          </div>
+          <p style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)", marginBottom: 4 }}>No accounts yet</p>
+          <p style={{ fontSize: 12, color: "var(--fg-3)", marginBottom: 16 }}>Add X accounts to start tracking ecosystems</p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+            <button onClick={() => setShowBulkPresets(true)} className="cos-btn-ghost">Load presets</button>
+            <button onClick={openAdd} className="cos-btn-primary">Add manually</button>
           </div>
         </div>
       )}
 
-      {/* Add/Edit Dialog */}
+      {/* Add / Edit dialog */}
       {showDialog && (
         <Dialog title={editAccount ? `Edit @${editAccount.username}` : "Add Account"} onClose={closeDialog}>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <Field label="Username *">
                 <input
                   type="text"
                   value={form.username ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, username: e.target.value.replace(/^@/, "") }))}
                   placeholder="e.g. Ronin_Network"
-                  className={INPUT_CLASS}
+                  className="cos-input"
                   disabled={!!editAccount}
                 />
               </Field>
@@ -475,17 +431,16 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
                   value={form.display_name ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))}
                   placeholder="e.g. Ronin Network"
-                  className={INPUT_CLASS}
+                  className="cos-input"
                 />
               </Field>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <Field label="Ecosystem">
                 <select
                   value={form.ecosystem ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, ecosystem: (e.target.value || undefined) as Ecosystem | undefined }))}
-                  className={INPUT_CLASS}
+                  className="cos-input"
                 >
                   <option value="">Select ecosystem...</option>
                   {ECOSYSTEMS.map((e) => (
@@ -497,7 +452,7 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
                 <select
                   value={form.category ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, category: (e.target.value || undefined) as AccountCategory | undefined }))}
-                  className={INPUT_CLASS}
+                  className="cos-input"
                 >
                   <option value="">Select category...</option>
                   {CATEGORIES.map((c) => (
@@ -506,16 +461,14 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
                 </select>
               </Field>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <Field label="Priority (1–10)">
                 <input
                   type="number"
-                  min={1}
-                  max={10}
+                  min={1} max={10}
                   value={form.priority ?? 5}
                   onChange={(e) => setForm((f) => ({ ...f, priority: parseInt(e.target.value) }))}
-                  className={INPUT_CLASS}
+                  className="cos-input"
                 />
               </Field>
               <Field label="Follower Count">
@@ -524,43 +477,36 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
                   value={form.follower_count ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, follower_count: e.target.value ? parseInt(e.target.value) : undefined }))}
                   placeholder="optional"
-                  className={INPUT_CLASS}
+                  className="cos-input"
                 />
               </Field>
             </div>
-
             <Field label="Notes">
               <textarea
                 value={form.notes ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                 placeholder="Why are you tracking this account?"
                 rows={2}
-                className={INPUT_CLASS + " resize-none"}
+                className="cos-input resize-none"
               />
             </Field>
-
-            <div className="flex items-center gap-2">
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
               <input
                 type="checkbox"
-                id="active-check"
                 checked={form.active ?? true}
                 onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
-                className="size-4 rounded"
+                style={{ width: 14, height: 14 }}
               />
-              <label htmlFor="active-check" className="text-sm text-foreground cursor-pointer">
-                Active — include in scraping pipeline
-              </label>
-            </div>
-
+              <span style={{ fontSize: 12.5, color: "var(--fg-2)" }}>Active — include in scraping pipeline</span>
+            </label>
             {error && (
-              <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{error}</p>
+              <div style={{ fontSize: 12, color: "var(--rose)", background: "var(--rose-dim)", padding: "8px 12px", borderRadius: 6 }}>
+                {error}
+              </div>
             )}
-
-            <div className="flex gap-3 justify-end pt-2">
-              <button type="button" onClick={closeDialog} className={BTN_SECONDARY}>
-                Cancel
-              </button>
-              <button type="submit" disabled={loading} className={BTN_PRIMARY}>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", paddingTop: 4 }}>
+              <button type="button" onClick={closeDialog} className="cos-btn-ghost">Cancel</button>
+              <button type="submit" disabled={loading} className="cos-btn-primary">
                 {loading ? "Saving..." : editAccount ? "Save Changes" : "Add Account"}
               </button>
             </div>
@@ -571,17 +517,15 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
       {/* Delete confirmation */}
       {deleteConfirm && (
         <Dialog title="Delete Account" onClose={() => setDeleteConfirm(null)}>
-          <p className="text-sm text-muted-foreground mb-6">
+          <p style={{ fontSize: 12.5, color: "var(--fg-3)", marginBottom: 20, lineHeight: 1.5 }}>
             This will permanently remove the account and stop tracking it. This action cannot be undone.
           </p>
-          <div className="flex gap-3 justify-end">
-            <button onClick={() => setDeleteConfirm(null)} className={BTN_SECONDARY}>
-              Cancel
-            </button>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button onClick={() => setDeleteConfirm(null)} className="cos-btn-ghost">Cancel</button>
             <button
               onClick={() => handleDelete(deleteConfirm)}
               disabled={loading}
-              className="px-4 py-2 bg-destructive/15 text-destructive rounded-lg text-sm font-medium hover:bg-destructive/25 transition-colors"
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 5, border: "1px solid rgba(244,63,94,.25)", background: "var(--rose-dim)", color: "var(--rose)", fontSize: 11, fontFamily: "var(--font-geist-mono)", cursor: "pointer", opacity: loading ? 0.5 : 1 }}
             >
               {loading ? "Deleting..." : "Delete"}
             </button>
@@ -589,31 +533,37 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
         </Dialog>
       )}
 
-      {/* Bulk Presets Dialog */}
+      {/* Bulk presets dialog */}
       {showBulkPresets && (
         <Dialog title="Add Preset Accounts" onClose={() => setShowBulkPresets(false)}>
-          <p className="text-sm text-muted-foreground mb-4">
+          <p style={{ fontSize: 12, color: "var(--fg-3)", marginBottom: 12 }}>
             Select accounts to add. Already tracked accounts are grayed out.
           </p>
-          <div className="space-y-2 max-h-80 overflow-y-auto mb-4">
+          <div style={{ maxHeight: 320, overflowY: "auto", marginBottom: 16, display: "flex", flexDirection: "column", gap: 4 }}>
             {PRESET_ACCOUNTS.map((preset) => {
               const alreadyAdded = accounts.some(
                 (a) => a.username.toLowerCase() === preset.username.toLowerCase()
               );
+              const selected = selectedPresets.has(preset.username);
               return (
                 <label
                   key={preset.username}
-                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    alreadyAdded
-                      ? "border-border bg-muted/30 opacity-50 cursor-not-allowed"
-                      : selectedPresets.has(preset.username)
-                      ? "border-primary/50 bg-primary/10"
-                      : "border-border bg-card hover:border-border/60"
-                  }`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "8px 10px",
+                    borderRadius: 6,
+                    border: `1px solid ${selected && !alreadyAdded ? "rgba(74,222,128,.25)" : "var(--hairline)"}`,
+                    background: selected && !alreadyAdded ? "var(--signal-dim)" : "var(--surface-2)",
+                    opacity: alreadyAdded ? 0.45 : 1,
+                    cursor: alreadyAdded ? "not-allowed" : "pointer",
+                    transition: "background 0.1s, border-color 0.1s",
+                  }}
                 >
                   <input
                     type="checkbox"
-                    checked={selectedPresets.has(preset.username)}
+                    checked={selected}
                     disabled={alreadyAdded}
                     onChange={(e) => {
                       setSelectedPresets((prev) => {
@@ -623,31 +573,26 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
                         return next;
                       });
                     }}
-                    className="size-4 rounded"
+                    style={{ width: 13, height: 13, flexShrink: 0 }}
                   />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-foreground">@{preset.username}</span>
-                      {alreadyAdded && (
-                        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
-                          already added
-                        </span>
-                      )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 500, color: "var(--fg)" }}>@{preset.username}</span>
+                      {alreadyAdded && <span className="cos-chip" style={{ fontSize: 9.5 }}>added</span>}
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] text-muted-foreground">{preset.display_name}</span>
-                      <span className="text-[10px] text-muted-foreground">·</span>
-                      <span className="text-[10px] text-muted-foreground capitalize">{preset.ecosystem}</span>
-                      <span className="text-[10px] text-muted-foreground">·</span>
-                      <span className="text-[10px] text-muted-foreground capitalize">{preset.category.replace("_", " ")}</span>
-                      <span className="text-[10px] text-muted-foreground">· Priority {preset.priority}</span>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", fontFamily: "var(--font-geist-mono)", fontSize: 10, color: "var(--fg-4)" }}>
+                      <span>{preset.display_name}</span>
+                      <span>·</span>
+                      <span className={`cos-eco ${preset.ecosystem}`}>{preset.ecosystem}</span>
+                      <span>·</span>
+                      <span>{preset.category.replace("_", " ")}</span>
                     </div>
                   </div>
                 </label>
               );
             })}
           </div>
-          <div className="flex items-center justify-between">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <button
               onClick={() => {
                 const available = new Set(
@@ -657,18 +602,16 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
                 );
                 setSelectedPresets(available);
               }}
-              className="text-sm text-primary hover:underline"
+              style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, color: "var(--signal)", background: "none", border: "none", cursor: "pointer" }}
             >
               Select all available
             </button>
-            <div className="flex gap-3">
-              <button onClick={() => setShowBulkPresets(false)} className={BTN_SECONDARY}>
-                Cancel
-              </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setShowBulkPresets(false)} className="cos-btn-ghost">Cancel</button>
               <button
                 onClick={addPresets}
                 disabled={loading || selectedPresets.size === 0}
-                className={BTN_PRIMARY}
+                className="cos-btn-primary"
               >
                 {loading ? "Adding..." : `Add ${selectedPresets.size} accounts`}
               </button>
@@ -681,15 +624,10 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
 }
 
 function AccountTable({
-  accounts,
-  ecoConfig,
-  catConfig,
-  onEdit,
-  onDelete,
-  onToggle,
+  accounts, ecoConfig, catConfig, onEdit, onDelete, onToggle,
 }: {
   accounts: Account[];
-  ecoConfig: Record<string, { label: string; color: string }>;
+  ecoConfig: Record<string, { label: string }>;
   catConfig: Record<string, { label: string; icon: string }>;
   onEdit: (a: Account) => void;
   onDelete: (id: string) => void;
@@ -697,7 +635,7 @@ function AccountTable({
 }) {
   if (accounts.length === 0) {
     return (
-      <div className="text-center py-6 bg-card border border-border rounded-xl text-sm text-muted-foreground">
+      <div className="cos-card" style={{ padding: "24px 16px", textAlign: "center", fontFamily: "var(--font-geist-mono)", fontSize: 11.5, color: "var(--fg-4)" }}>
         No accounts match your filters
       </div>
     );
@@ -706,131 +644,143 @@ function AccountTable({
   return (
     <>
       {/* Mobile: card list */}
-      <div className="md:hidden space-y-3">
-        {accounts.map((account) => {
-          const eco = account.ecosystem ? ecoConfig[account.ecosystem] : null;
-          const cat = account.category ? catConfig[account.category] : null;
-          return (
-            <div key={account.id} className="bg-card border border-border rounded-xl p-4 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className={`size-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${getEcoAvatar(account.ecosystem)}`}>
-                    {account.username.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-medium text-foreground text-sm">@{account.username}</p>
-                    {account.display_name && <p className="text-xs text-muted-foreground">{account.display_name}</p>}
-                  </div>
+      <div className="md:hidden space-y-2">
+        {accounts.map((account) => (
+          <div key={account.id} className="cos-card" style={{ padding: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div className="cos-user-cell">
+                <div className={`cos-avatar ${account.ecosystem ?? "other"}`}>
+                  {account.username.charAt(0).toUpperCase()}
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => onEdit(account)} className="p-2 rounded-lg bg-muted text-muted-foreground hover:text-foreground transition-colors">
-                    <Edit2 className="size-3.5" />
-                  </button>
-                  <button onClick={() => onDelete(account.id)} className="p-2 rounded-lg bg-muted text-muted-foreground hover:text-destructive transition-colors">
-                    <Trash2 className="size-3.5" />
-                  </button>
+                <div>
+                  <div className="cos-user-handle">@{account.username}</div>
+                  {account.display_name && <div className="cos-user-name">{account.display_name}</div>}
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                {eco && <span className={`text-xs px-2 py-0.5 rounded-full border ${eco.color}`}>{eco.label}</span>}
-                {cat && <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${CATEGORY_COLORS[account.category ?? ""] ?? "bg-muted text-muted-foreground"}`}>{cat.label}</span>}
-              </div>
-
-              <div className="flex items-center justify-between pt-2 border-t border-border">
-                <div className="flex items-center gap-2">
-                  <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${account.priority >= 8 ? "bg-green-400" : account.priority >= 5 ? "bg-amber-400" : "bg-muted-foreground"}`}
-                      style={{ width: `${account.priority * 10}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-muted-foreground">{account.priority}/10</span>
-                </div>
-                <button onClick={() => onToggle(account)} className="flex items-center gap-1.5 text-xs">
-                  {account.active ? (
-                    <><CheckCircle2 className="size-3.5 text-green-400" /><span className="text-green-400">Active</span></>
-                  ) : (
-                    <><XCircle className="size-3.5 text-muted-foreground" /><span className="text-muted-foreground">Inactive</span></>
-                  )}
+              <div className="cos-row-actions" style={{ opacity: 0.7 }}>
+                <button className="cos-row-action" onClick={() => onEdit(account)}>
+                  <Edit2 style={{ width: 13, height: 13 }} />
+                </button>
+                <button className="cos-row-action" onClick={() => onDelete(account.id)}>
+                  <Trash2 style={{ width: 13, height: 13 }} />
                 </button>
               </div>
             </div>
-          );
-        })}
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
+              {account.ecosystem && (
+                <span className={`cos-eco ${account.ecosystem}`}>{ecoConfig[account.ecosystem]?.label}</span>
+              )}
+              {account.category && (
+                <span className={`cos-chip ${CATEGORY_CHIP[account.category] ?? ""}`}>{catConfig[account.category]?.label}</span>
+              )}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 10, borderTop: "1px solid var(--hairline)" }}>
+              <div className="cos-priority-bar">
+                <div className="cos-priority-track">
+                  <div className="cos-priority-fill" style={{ width: `${account.priority * 10}%`, background: priorityColor(account.priority) }} />
+                </div>
+                <span className="cos-priority-val">{account.priority}/10</span>
+              </div>
+              <button
+                onClick={() => onToggle(account)}
+                style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: "var(--font-geist-mono)", fontSize: 11, background: "none", border: "none", cursor: "pointer" }}
+              >
+                {account.active ? (
+                  <><CheckCircle2 style={{ width: 13, height: 13, color: "var(--signal)" }} /><span style={{ color: "var(--signal)" }}>Active</span></>
+                ) : (
+                  <><XCircle style={{ width: 13, height: 13, color: "var(--fg-4)" }} /><span style={{ color: "var(--fg-4)" }}>Inactive</span></>
+                )}
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Desktop: table */}
-      <div className="hidden md:block bg-card border border-border rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="hidden md:block cos-card">
+        <table className="cos-list-table">
           <thead>
-            <tr className="border-b border-border bg-muted/30">
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Account</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Ecosystem</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Category</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Priority</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Status</th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground">Actions</th>
+            <tr>
+              <th>Account</th>
+              <th>Ecosystem</th>
+              <th>Category</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th style={{ textAlign: "right" }}>Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
-            {accounts.map((account) => {
-              const eco = account.ecosystem ? ecoConfig[account.ecosystem] : null;
-              const cat = account.category ? catConfig[account.category] : null;
-              return (
-                <tr key={account.id} className="hover:bg-muted/20 transition-colors group">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`size-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${getEcoAvatar(account.ecosystem)}`}>
-                        {account.username.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <p className="font-medium text-foreground">@{account.username}</p>
-                          <a href={`https://x.com/${account.username}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ExternalLink className="size-3" />
-                          </a>
-                        </div>
-                        {account.display_name && <p className="text-xs text-muted-foreground">{account.display_name}</p>}
-                      </div>
+          <tbody>
+            {accounts.map((account) => (
+              <tr key={account.id}>
+                <td>
+                  <div className="cos-user-cell">
+                    <div className={`cos-avatar ${account.ecosystem ?? "other"}`}>
+                      {account.username.charAt(0).toUpperCase()}
                     </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {eco ? <span className={`text-xs px-2 py-0.5 rounded-full border ${eco.color}`}>{eco.label}</span> : <span className="text-xs text-muted-foreground">—</span>}
-                  </td>
-                  <td className="px-4 py-3">
-                    {cat ? <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${CATEGORY_COLORS[account.category ?? ""] ?? "bg-muted text-muted-foreground"}`}>{cat.label}</span> : <span className="text-xs text-muted-foreground">—</span>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${account.priority >= 8 ? "bg-green-400" : account.priority >= 5 ? "bg-amber-400" : "bg-muted-foreground"}`} style={{ width: `${account.priority * 10}%` }} />
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span className="cos-user-handle">@{account.username}</span>
+                        <a
+                          href={`https://x.com/${account.username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: "var(--fg-5)", transition: "color 0.1s" }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--fg-3)")}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--fg-5)")}
+                        >
+                          <ExternalLink style={{ width: 11, height: 11 }} />
+                        </a>
                       </div>
-                      <span className="text-xs text-muted-foreground">{account.priority}</span>
+                      {account.display_name && <div className="cos-user-name">{account.display_name}</div>}
                     </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => onToggle(account)} className="flex items-center gap-1.5 text-xs">
-                      {account.active ? (
-                        <><CheckCircle2 className="size-3.5 text-green-400" /><span className="text-green-400">Active</span></>
-                      ) : (
-                        <><XCircle className="size-3.5 text-muted-foreground" /><span className="text-muted-foreground">Inactive</span></>
-                      )}
+                  </div>
+                </td>
+                <td>
+                  {account.ecosystem ? (
+                    <span className={`cos-eco ${account.ecosystem}`}>{ecoConfig[account.ecosystem]?.label}</span>
+                  ) : (
+                    <span style={{ color: "var(--fg-5)" }}>—</span>
+                  )}
+                </td>
+                <td>
+                  {account.category ? (
+                    <span className={`cos-chip ${CATEGORY_CHIP[account.category] ?? ""}`}>{catConfig[account.category]?.label}</span>
+                  ) : (
+                    <span style={{ color: "var(--fg-5)" }}>—</span>
+                  )}
+                </td>
+                <td>
+                  <div className="cos-priority-bar">
+                    <div className="cos-priority-track">
+                      <div className="cos-priority-fill" style={{ width: `${account.priority * 10}%`, background: priorityColor(account.priority) }} />
+                    </div>
+                    <span className="cos-priority-val">{account.priority}</span>
+                  </div>
+                </td>
+                <td>
+                  <button
+                    onClick={() => onToggle(account)}
+                    style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: "var(--font-geist-mono)", fontSize: 11, background: "none", border: "none", cursor: "pointer" }}
+                  >
+                    {account.active ? (
+                      <><CheckCircle2 style={{ width: 13, height: 13, color: "var(--signal)" }} /><span style={{ color: "var(--signal)" }}>Active</span></>
+                    ) : (
+                      <><XCircle style={{ width: 13, height: 13, color: "var(--fg-4)" }} /><span style={{ color: "var(--fg-4)" }}>Inactive</span></>
+                    )}
+                  </button>
+                </td>
+                <td style={{ textAlign: "right" }}>
+                  <div className="cos-row-actions" style={{ justifyContent: "flex-end" }}>
+                    <button className="cos-row-action" onClick={() => onEdit(account)}>
+                      <Edit2 style={{ width: 13, height: 13 }} />
                     </button>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => onEdit(account)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                        <Edit2 className="size-3.5" />
-                      </button>
-                      <button onClick={() => onDelete(account.id)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+                    <button className="cos-row-action" onClick={() => onDelete(account.id)}>
+                      <Trash2 style={{ width: 13, height: 13 }} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -841,15 +791,29 @@ function AccountTable({
 function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h3 className="font-semibold text-foreground">{title}</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
-            <X className="size-4" />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="relative"
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--hairline-2)",
+          borderRadius: 10,
+          width: "100%",
+          maxWidth: 520,
+          maxHeight: "90vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          boxShadow: "0 24px 48px rgba(0,0,0,.5)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid var(--hairline)", flexShrink: 0 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)" }}>{title}</span>
+          <button className="cos-row-action" onClick={onClose}>
+            <X style={{ width: 14, height: 14 }} />
           </button>
         </div>
-        <div className="px-6 py-5">{children}</div>
+        <div style={{ padding: "20px", overflowY: "auto" }}>{children}</div>
       </div>
     </div>
   );
@@ -857,43 +821,41 @@ function Dialog({ title, onClose, children }: { title: string; onClose: () => vo
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+      <label style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10.5, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--fg-4)" }}>
+        {label}
+      </label>
       {children}
     </div>
   );
 }
 
 function SelectFilter({
-  value,
-  onChange,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-}) {
+  value, onChange, options,
+}: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
   return (
-    <div className="relative">
+    <div style={{ position: "relative" }}>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="appearance-none pl-3 pr-7 py-2 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary/50 cursor-pointer"
+        style={{
+          appearance: "none",
+          paddingLeft: 10, paddingRight: 26, paddingTop: 6, paddingBottom: 6,
+          background: "var(--surface-2)",
+          border: "1px solid var(--hairline)",
+          borderRadius: 6,
+          fontFamily: "var(--font-geist-mono)",
+          fontSize: 11,
+          color: "var(--fg-3)",
+          outline: "none",
+          cursor: "pointer",
+        }}
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
-      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+      <ChevronDown style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", width: 12, height: 12, color: "var(--fg-4)", pointerEvents: "none" }} />
     </div>
   );
 }
-
-const INPUT_CLASS =
-  "w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors";
-
-const BTN_PRIMARY =
-  "px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50";
-
-const BTN_SECONDARY =
-  "px-4 py-2 bg-card border border-border rounded-lg text-sm text-foreground hover:bg-muted transition-colors";

@@ -30,18 +30,17 @@ export default async function IdeasPage({ searchParams }: PageProps) {
   const ideas = data ?? [];
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-black text-foreground">
-          <span className="bg-gradient-to-r from-violet-400 to-violet-400/60 bg-clip-text text-transparent">Ideas</span>
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">AI-generated content opportunities from detected events</p>
+    <div className="cos-page space-y-4">
+      <div className="cos-page-head">
+        <div className="cos-eyebrow">GENERATED · {ideas.length} TOTAL</div>
+        <h1 className="cos-page-title">Ideas</h1>
+        <p className="cos-page-sub">AI-generated content opportunities, ranked by potential.</p>
       </div>
 
       <IdeasFilters />
 
       {error && (
-        <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg px-4 py-3">
+        <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "var(--rose-dim)", color: "var(--rose)", border: "1px solid rgba(244,63,94,.2)" }}>
           Failed to load ideas: {error.message}
         </div>
       )}

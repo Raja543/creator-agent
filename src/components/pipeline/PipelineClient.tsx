@@ -16,34 +16,28 @@ interface Props {
   initialGrouped: Record<string, ContentIdea[] | null>;
 }
 
-const FORMAT_COLORS: Record<string, string> = {
-  thread: "bg-blue-400/15 text-blue-400",
-  infographic: "bg-violet-400/15 text-violet-400",
-  guide: "bg-cyan-400/15 text-cyan-400",
-  comparison: "bg-amber-400/15 text-amber-400",
-  analysis: "bg-orange-400/15 text-orange-400",
-  narrative: "bg-pink-400/15 text-pink-400",
-  breakdown: "bg-green-400/15 text-green-400",
+const STAGE_CLS: Record<string, string> = {
+  idea:       "idea",
+  draft:      "draft",
+  preparing:  "prep",
+  review:     "rev",
+  published:  "pub",
 };
 
-const POTENTIAL_COLORS: Record<string, string> = {
-  high: "bg-green-400/15 text-green-400",
-  medium: "bg-amber-400/15 text-amber-400",
-  low: "bg-muted text-muted-foreground",
+const FORMAT_CLS: Record<string, string> = {
+  thread:      "ronin",
+  infographic: "violet",
+  guide:       "abstract",
+  comparison:  "amber",
+  analysis:    "amber",
+  narrative:   "rose",
+  breakdown:   "",
 };
 
-const STAGE_HEADER_COLORS: Record<string, string> = {
-  idea: "border-violet-400/40 bg-gradient-to-r from-violet-400/10 to-violet-400/5",
-  draft: "border-blue-400/40 bg-gradient-to-r from-blue-400/10 to-blue-400/5",
-  preparing: "border-amber-400/40 bg-gradient-to-r from-amber-400/10 to-amber-400/5",
-  review: "border-orange-400/40 bg-gradient-to-r from-orange-400/10 to-orange-400/5",
-  published: "border-green-400/40 bg-gradient-to-r from-green-400/10 to-green-400/5",
-};
-
-const POTENTIAL_BORDER: Record<string, string> = {
-  high: "border-l-green-400",
-  medium: "border-l-amber-400",
-  low: "border-l-border",
+const POTENTIAL_CLS: Record<string, string> = {
+  high:   "signal",
+  medium: "amber",
+  low:    "",
 };
 
 function parseUTC(iso: string): Date {
@@ -63,10 +57,10 @@ function formatRelative(isoString: string) {
 
 export function PipelineClient({ stages, initialGrouped }: Props) {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setMounted(true); }, []);
 
   const [viewTarget, setViewTarget] = useState<ContentIdea | null>(null);
-
   const [grouped, setGrouped] = useState<Record<string, ContentIdea[]>>(() =>
     Object.fromEntries(stages.map((s) => [s.id, initialGrouped[s.id] ?? []]))
   );
@@ -139,116 +133,110 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
 
   if (!mounted) {
     return (
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {stages.map((stage) => (
-          <div key={stage.id} className="w-[280px] shrink-0 flex flex-col">
-            <div className={`flex items-center justify-between px-3 py-2 rounded-t-xl border-t border-x ${STAGE_HEADER_COLORS[stage.id] ?? ""}`}>
-              <span className={`text-sm font-semibold ${stage.color}`}>{stage.label}</span>
-              <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
-                {(initialGrouped[stage.id] ?? []).length}
-              </span>
+      <div className="flex gap-3 overflow-x-auto pb-4">
+        {stages.map((stage) => {
+          const cls = STAGE_CLS[stage.id] ?? "idea";
+          return (
+            <div key={stage.id} className="cos-kanban-col" style={{ width: 240, flexShrink: 0 }}>
+              <div className="cos-kanban-head">
+                <div className={`cos-kanban-title ${cls}`}>
+                  <span className="dot" />
+                  {stage.label}
+                </div>
+                <span className="cos-kanban-count">{(initialGrouped[stage.id] ?? []).length}</span>
+              </div>
+              <div className="cos-kanban-body" style={{ minHeight: 400 }} />
             </div>
-            <div className="flex-1 min-h-[400px] rounded-b-xl border border-border bg-muted/20 p-2" />
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   }
 
   return (
     <div>
-      <p className="text-sm text-muted-foreground mb-5">
+      <p style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10.5, color: "var(--fg-4)", marginBottom: 16 }}>
         {totalCards} items in pipeline
       </p>
 
       {/* ── Mobile: tab-based single column ── */}
       <div className="md:hidden">
-        {/* Stage tabs — scrollable with fade hint */}
         <div className="relative mb-4">
-        <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-none">
-          {stages.map((stage) => {
-            const count = grouped[stage.id]?.length ?? 0;
-            return (
-              <button
-                key={stage.id}
-                onClick={() => setActiveStage(stage.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap shrink-0 transition-colors ${
-                  activeStage === stage.id
-                    ? "bg-card border border-primary/30 text-foreground"
-                    : "bg-muted/50 text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <span className={activeStage === stage.id ? stage.color : ""}>{stage.label}</span>
-                <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${activeStage === stage.id ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="absolute right-0 top-0 bottom-3 w-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+          <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-none">
+            {stages.map((stage) => {
+              const count = grouped[stage.id]?.length ?? 0;
+              const isActive = activeStage === stage.id;
+              return (
+                <button
+                  key={stage.id}
+                  onClick={() => setActiveStage(stage.id)}
+                  className={`cos-fchip ${isActive ? "active" : ""}`}
+                  style={{ flexShrink: 0 }}
+                >
+                  {stage.label}
+                  <span className="ct">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="absolute right-0 top-0 bottom-3 w-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
         </div>
 
-        {/* Active stage cards */}
         {(() => {
           const cards = grouped[activeStage] ?? [];
           const currentStageIdx = stages.findIndex((s) => s.id === activeStage);
           const nextStage = stages[currentStageIdx + 1];
           const prevStage = stages[currentStageIdx - 1];
+          const cls = STAGE_CLS[activeStage] ?? "idea";
           return cards.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3 bg-card border border-border rounded-xl">
-              <Inbox className="size-8 text-muted-foreground opacity-40" />
-              <p className="text-sm text-muted-foreground">No cards in this stage</p>
+            <div className="cos-card" style={{ padding: "48px 20px", textAlign: "center" }}>
+              <Inbox style={{ width: 28, height: 28, color: "var(--fg-5)", margin: "0 auto 10px" }} />
+              <p style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, color: "var(--fg-4)" }}>No cards in this stage</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {cards.map((card) => (
-                <div key={card.id} onClick={() => setViewTarget(card)} className={`bg-card border border-border border-l-2 rounded-xl p-4 cursor-pointer active:scale-[0.99] transition-transform ${POTENTIAL_BORDER[card.potential ?? "low"] ?? "border-l-border"}`}>
-                  <p className="text-sm font-bold text-foreground leading-snug mb-3">{card.title}</p>
-                  <div className="flex items-center gap-1.5 flex-wrap mb-3">
-                    {card.format && (
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium capitalize ${FORMAT_COLORS[card.format] ?? "bg-muted text-muted-foreground"}`}>
-                        {card.format}
-                      </span>
-                    )}
-                    {card.potential && (
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium capitalize ${POTENTIAL_COLORS[card.potential] ?? "bg-muted text-muted-foreground"}`}>
-                        {card.potential}
-                      </span>
-                    )}
+                <div
+                  key={card.id}
+                  onClick={() => setViewTarget(card)}
+                  className={`cos-kanban-card ${cls}`}
+                >
+                  <h4>{card.title}</h4>
+                  <div className="cos-kanban-card-tags">
+                    {card.format && <span className={`cos-chip ${FORMAT_CLS[card.format] ?? ""}`}>{card.format}</span>}
+                    {card.potential && <span className={`cos-chip ${POTENTIAL_CLS[card.potential] ?? ""}`}>{card.potential}</span>}
                   </div>
-                  <div className="pt-3 border-t border-border/50 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="size-3" />
-                        {formatRelative(card.created_at)}
-                      </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); deleteIdea(card.id, card.status); }}
-                        className="p-1 rounded text-muted-foreground/50 hover:text-destructive transition-colors"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
+                  <div className="cos-kanban-card-meta">
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <Clock style={{ width: 10, height: 10 }} />
+                      {formatRelative(card.created_at)}
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                      {prevStage ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {prevStage && (
                         <button
                           onClick={(e) => { e.stopPropagation(); moveToPrevStage(card); }}
-                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-medium transition-colors"
+                          style={{ display: "flex", alignItems: "center", gap: 2, fontFamily: "var(--font-geist-mono)", fontSize: 10, color: "var(--fg-4)", background: "none", border: "none", cursor: "pointer" }}
                         >
-                          <ChevronLeft className="size-3" />
+                          <ChevronLeft style={{ width: 10, height: 10 }} />
                           {prevStage.label}
                         </button>
-                      ) : <span />}
+                      )}
                       {nextStage && (
                         <button
                           onClick={(e) => { e.stopPropagation(); moveToNextStage(card); }}
-                          className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+                          style={{ display: "flex", alignItems: "center", gap: 2, fontFamily: "var(--font-geist-mono)", fontSize: 10, color: "var(--signal)", background: "none", border: "none", cursor: "pointer" }}
                         >
                           {nextStage.label}
-                          <ChevronRight className="size-3" />
+                          <ChevronRight style={{ width: 10, height: 10 }} />
                         </button>
                       )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteIdea(card.id, card.status); }}
+                        className="cos-row-action"
+                        style={{ width: 22, height: 22 }}
+                      >
+                        <Trash2 style={{ width: 11, height: 11 }} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -260,16 +248,18 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
 
       {/* ── Desktop: kanban board ── */}
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="hidden md:flex gap-4 overflow-x-auto pb-6">
+        <div className="hidden md:flex gap-3 overflow-x-auto pb-6">
           {stages.map((stage) => {
             const cards = grouped[stage.id] ?? [];
+            const cls = STAGE_CLS[stage.id] ?? "idea";
             return (
-              <div key={stage.id} className="w-[280px] shrink-0 flex flex-col">
-                <div className={`flex items-center justify-between px-3 py-2.5 rounded-t-xl border-t border-x ${STAGE_HEADER_COLORS[stage.id] ?? "border-border bg-muted/30"}`}>
-                  <span className={`text-sm font-semibold ${stage.color}`}>{stage.label}</span>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full tabular-nums ${cards.length > 0 ? "bg-card/60 text-foreground" : "bg-black/20 text-muted-foreground"}`}>
-                    {cards.length}
-                  </span>
+              <div key={stage.id} className="cos-kanban-col" style={{ width: 248, flexShrink: 0 }}>
+                <div className="cos-kanban-head">
+                  <div className={`cos-kanban-title ${cls}`}>
+                    <span className="dot" />
+                    {stage.label}
+                  </div>
+                  <span className="cos-kanban-count">{cards.length}</span>
                 </div>
 
                 <Droppable droppableId={stage.id}>
@@ -277,9 +267,14 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
                     <div
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      className={`flex-1 min-h-[420px] max-h-[calc(100vh-280px)] overflow-y-auto rounded-b-xl border p-2 space-y-2 transition-colors duration-150 ${
-                        snapshot.isDraggingOver ? "bg-primary/8 border-primary/40" : "bg-muted/20 border-border"
-                      }`}
+                      className="cos-kanban-body"
+                      style={{
+                        minHeight: 420,
+                        maxHeight: "calc(100vh - 280px)",
+                        overflowY: "auto",
+                        background: snapshot.isDraggingOver ? "rgba(74,222,128,.03)" : undefined,
+                        transition: "background 0.15s",
+                      }}
                     >
                       {cards.map((card, index) => (
                         <Draggable key={card.id} draggableId={card.id} index={index}>
@@ -288,46 +283,45 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              style={provided.draggableProps.style}
-                              className={`bg-card rounded-lg p-3 border-l-2 border border-border select-none transition-all duration-150 cursor-grab active:cursor-grabbing ${
-                                snapshot.isDragging
-                                  ? "border-l-primary border-primary/30 shadow-xl shadow-black/30 rotate-1 opacity-95 scale-105"
-                                  : `${POTENTIAL_BORDER[card.potential ?? "low"] ?? "border-l-border"} hover:border-muted-foreground/30 hover:shadow-md hover:shadow-black/10 hover:-translate-y-0.5`
-                              }`}
+                              className={`cos-kanban-card ${cls}`}
+                              style={{
+                                ...provided.draggableProps.style,
+                                cursor: snapshot.isDragging ? "grabbing" : "grab",
+                                opacity: snapshot.isDragging ? 0.95 : 1,
+                                boxShadow: snapshot.isDragging ? "0 16px 32px rgba(0,0,0,.45)" : undefined,
+                              }}
                             >
-                              <p className="text-xs font-bold text-foreground leading-snug">{card.title}</p>
-                              <div className="flex flex-wrap gap-1 mt-2">
+                              <h4>{card.title}</h4>
+                              <div className="cos-kanban-card-tags">
                                 {card.format && (
-                                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full capitalize font-medium ${FORMAT_COLORS[card.format] ?? "bg-muted text-muted-foreground"}`}>
-                                    {card.format}
-                                  </span>
+                                  <span className={`cos-chip ${FORMAT_CLS[card.format] ?? ""}`}>{card.format}</span>
                                 )}
                                 {card.potential && (
-                                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full capitalize font-medium ${POTENTIAL_COLORS[card.potential] ?? "bg-muted text-muted-foreground"}`}>
-                                    {card.potential}
-                                  </span>
+                                  <span className={`cos-chip ${POTENTIAL_CLS[card.potential] ?? ""}`}>{card.potential}</span>
                                 )}
                               </div>
-                              <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-border/50">
-                                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                                  <Clock className="size-2.5" />
+                              <div className="cos-kanban-card-meta">
+                                <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                                  <Clock style={{ width: 9, height: 9 }} />
                                   {formatRelative(card.created_at)}
                                 </div>
-                                <div className="flex items-center gap-1">
+                                <div className="cos-row-actions">
                                   <button
+                                    className="cos-row-action"
+                                    style={{ width: 22, height: 22 }}
                                     onPointerDown={(e) => e.stopPropagation()}
                                     onClick={(e) => { e.stopPropagation(); setViewTarget(card); }}
-                                    className="text-muted-foreground/50 hover:text-foreground transition-colors p-0.5 rounded"
                                     title="View details"
                                   >
-                                    <Pencil className="size-3" />
+                                    <Pencil style={{ width: 10, height: 10 }} />
                                   </button>
                                   <button
+                                    className="cos-row-action"
+                                    style={{ width: 22, height: 22 }}
                                     onPointerDown={(e) => e.stopPropagation()}
                                     onClick={(e) => { e.stopPropagation(); deleteIdea(card.id, card.status); }}
-                                    className="text-muted-foreground/50 hover:text-destructive transition-colors p-0.5 rounded"
                                   >
-                                    <Trash2 className="size-3" />
+                                    <Trash2 style={{ width: 10, height: 10 }} />
                                   </button>
                                 </div>
                               </div>
@@ -337,9 +331,9 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
                       ))}
                       {provided.placeholder}
                       {cards.length === 0 && !snapshot.isDraggingOver && (
-                        <div className="flex flex-col items-center justify-center h-32 gap-2 opacity-30 border-2 border-dashed border-border rounded-lg m-1">
-                          <Inbox className="size-4 text-muted-foreground" />
-                          <p className="text-xs text-muted-foreground">Drop here</p>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 80, gap: 6, opacity: 0.25, border: "1px dashed var(--hairline-2)", borderRadius: 6, margin: 4 }}>
+                          <Inbox style={{ width: 14, height: 14, color: "var(--fg-4)" }} />
+                          <span style={{ fontFamily: "var(--font-geist-mono)", fontSize: 9.5, color: "var(--fg-4)" }}>Drop here</span>
                         </div>
                       )}
                     </div>
@@ -355,64 +349,75 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
       {viewTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setViewTarget(null)} />
-          <div className="relative z-10 bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
-              <div className="flex items-center gap-2 flex-wrap">
+          <div
+            className="relative z-10"
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--hairline-2)",
+              borderRadius: 10,
+              width: "100%",
+              maxWidth: 520,
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              boxShadow: "0 24px 48px rgba(0,0,0,.5)",
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid var(--hairline)", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                 {viewTarget.format && (
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${FORMAT_COLORS[viewTarget.format] ?? "bg-muted text-muted-foreground"}`}>
-                    {viewTarget.format}
-                  </span>
+                  <span className={`cos-chip ${FORMAT_CLS[viewTarget.format] ?? ""}`}>{viewTarget.format}</span>
                 )}
                 {viewTarget.potential && (
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full capitalize ${POTENTIAL_COLORS[viewTarget.potential] ?? "bg-muted text-muted-foreground"}`}>
-                    {viewTarget.potential}
-                  </span>
+                  <span className={`cos-chip ${POTENTIAL_CLS[viewTarget.potential] ?? ""}`}>{viewTarget.potential}</span>
                 )}
                 {(() => {
                   const stage = stages.find((s) => s.id === viewTarget.status);
-                  return stage ? (
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full capitalize ${stage.color} bg-muted/50`}>
-                      {stage.label}
-                    </span>
-                  ) : null;
+                  if (!stage) return null;
+                  const cls = STAGE_CLS[stage.id] ?? "idea";
+                  const colorMap: Record<string, string> = { idea: "ronin", draft: "amber", prep: "violet", rev: "signal", pub: "abstract" };
+                  return <span className={`cos-chip ${colorMap[cls] ?? ""}`}>{stage.label}</span>;
                 })()}
               </div>
-              <button onClick={() => setViewTarget(null)} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                <X className="size-4" />
+              <button className="cos-row-action" onClick={() => setViewTarget(null)}>
+                <X style={{ width: 14, height: 14 }} />
               </button>
             </div>
 
-            <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
-              <h2 className="text-xl font-black text-foreground leading-snug">
+            {/* Body */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--fg)", lineHeight: 1.3, marginBottom: 16 }}>
                 {viewTarget.title ?? "Untitled Idea"}
               </h2>
 
               {viewTarget.description ? (
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Description</p>
-                  <p className="text-sm text-foreground leading-relaxed">{viewTarget.description}</p>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-4)", marginBottom: 6 }}>Description</div>
+                  <p style={{ fontSize: 13, color: "var(--fg-2)", lineHeight: 1.6 }}>{viewTarget.description}</p>
                 </div>
               ) : null}
 
               {viewTarget.angle ? (
-                <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
-                  <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1.5">Angle</p>
-                  <p className="text-sm text-foreground leading-relaxed">{viewTarget.angle}</p>
+                <div className="cos-idea-angle" style={{ marginBottom: 14 }}>
+                  <div className="cos-idea-angle-label">Angle</div>
+                  <p style={{ fontSize: 13, color: "var(--fg-2)", lineHeight: 1.5 }}>{viewTarget.angle}</p>
                 </div>
               ) : null}
 
               {viewTarget.notes ? (
-                <div className="bg-muted/50 rounded-xl px-4 py-3">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Notes</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{viewTarget.notes}</p>
+                <div style={{ background: "var(--surface-2)", borderRadius: 6, padding: "10px 12px", marginBottom: 14 }}>
+                  <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-4)", marginBottom: 6 }}>Notes</div>
+                  <p style={{ fontSize: 12, color: "var(--fg-3)", lineHeight: 1.5 }}>{viewTarget.notes}</p>
                 </div>
               ) : null}
 
-              <div className="flex items-center gap-4 pt-1 text-xs text-muted-foreground flex-wrap">
-                <div className="flex items-center gap-1">
-                  <Clock className="size-3" />
+              <div style={{ display: "flex", gap: 16, fontFamily: "var(--font-geist-mono)", fontSize: 10.5, color: "var(--fg-4)", flexWrap: "wrap" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <Clock style={{ width: 11, height: 11 }} />
                   {formatRelative(viewTarget.created_at)}
-                </div>
+                </span>
                 <span>Priority {viewTarget.priority}/10</span>
               </div>
             </div>

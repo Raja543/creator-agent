@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { Plus, Pencil, Trash2, X, Check, AlertTriangle, Search } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { Account, Ecosystem, AccountCategory } from "@/lib/database.types";
@@ -55,23 +55,6 @@ function getEcoAvatar(ecosystem: string | null | undefined): string {
   return "bg-primary/15 text-primary";
 }
 
-function parseUTC(iso: string): Date {
-  const hasZone = iso.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(iso);
-  return new Date(hasZone ? iso : iso + "Z");
-}
-
-function formatRelativeTime(iso: string | null) {
-  if (!iso) return "Never";
-  const diff = Date.now() - parseUTC(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "Just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return `${d}d ago`;
-}
-
 type FormData = {
   username: string;
   display_name: string;
@@ -91,18 +74,6 @@ const emptyForm: FormData = {
   active: true,
   notes: "",
 };
-
-function accountToForm(a: Account): FormData {
-  return {
-    username: a.username,
-    display_name: a.display_name ?? "",
-    ecosystem: a.ecosystem ?? "",
-    category: a.category ?? "",
-    priority: a.priority,
-    active: a.active,
-    notes: a.notes ?? "",
-  };
-}
 
 interface DialogProps {
   title: string;
@@ -260,11 +231,9 @@ interface Props {
   activeFilter: string;
 }
 
-export function SourcesClient({ initialSources, activeFilter }: Props) {
+export function SourcesClient({ initialSources }: Props) {
   const [sources, setSources] = useState<Account[]>(initialSources);
   const [showAdd, setShowAdd] = useState(false);
-  const [editTarget, setEditTarget] = useState<Account | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Account | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -278,16 +247,6 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
         (s.display_name ?? "").toLowerCase().includes(q)
     );
   }, [sources, search]);
-
-  const refresh = useCallback(async () => {
-    const params = new URLSearchParams();
-    if (activeFilter && activeFilter !== "all") params.set("ecosystem", activeFilter);
-    const res = await fetch(`/api/sources?${params.toString()}`);
-    if (res.ok) {
-      const data = await res.json();
-      setSources(data);
-    }
-  }, [activeFilter]);
 
   async function handleAdd(form: FormData) {
     setSubmitting(true);
@@ -315,57 +274,6 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
       toast.success(`@${newAccount.username} added`);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed to add source");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleEdit(form: FormData) {
-    if (!editTarget) return;
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/sources/${editTarget.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: form.username,
-          display_name: form.display_name || null,
-          ecosystem: form.ecosystem || null,
-          category: form.category || null,
-          priority: form.priority,
-          active: form.active,
-          notes: form.notes || null,
-        }),
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error ?? "Failed to update source");
-      }
-      const updated: Account = await res.json();
-      setSources((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-      setEditTarget(null);
-      toast.success("Source updated");
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to update source");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleDelete() {
-    if (!deleteTarget) return;
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/sources/${deleteTarget.id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error ?? "Failed to delete source");
-      }
-      setSources((prev) => prev.filter((s) => s.id !== deleteTarget.id));
-      toast.success(`@${deleteTarget.username} removed`);
-      setDeleteTarget(null);
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete source");
     } finally {
       setSubmitting(false);
     }
@@ -440,31 +348,15 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
           <div className="md:hidden space-y-3">
             {displayed.map((source) => (
               <div key={source.id} className="bg-card border border-border rounded-xl p-4 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`size-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${getEcoAvatar(source.ecosystem)}`}>
-                      {source.username.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-foreground">@{source.username}</p>
-                      {source.display_name && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{source.display_name}</p>
-                      )}
-                    </div>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`size-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${getEcoAvatar(source.ecosystem)}`}>
+                    {source.username.charAt(0).toUpperCase()}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() => { setEditTarget(source); }}
-                      className="p-2 rounded-lg bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Pencil className="size-3.5" />
-                    </button>
-                    <button
-                      onClick={() => { setDeleteTarget(source); }}
-                      className="p-2 rounded-lg bg-muted text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground">@{source.username}</p>
+                    {source.display_name && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{source.display_name}</p>
+                    )}
                   </div>
                 </div>
 
@@ -510,7 +402,6 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wide px-4 py-3">Category</th>
                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wide px-4 py-3">Priority</th>
                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wide px-4 py-3">Status</th>
-                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wide px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -558,16 +449,6 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
                         <span className={`pointer-events-none inline-block size-4 rounded-full bg-white shadow transition-transform ${source.active ? "translate-x-4" : "translate-x-0"}`} />
                       </button>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => { setEditTarget(source); }} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-                          <Pencil className="size-3.5" />
-                        </button>
-                        <button onClick={() => { setDeleteTarget(source); }} className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
-                          <Trash2 className="size-3.5" />
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -588,44 +469,6 @@ export function SourcesClient({ initialSources, activeFilter }: Props) {
         </Dialog>
       )}
 
-      {editTarget && (
-        <Dialog title={`Edit @${editTarget.username}`} onClose={() => setEditTarget(null)}>
-          <SourceForm
-            initial={accountToForm(editTarget)}
-            onSubmit={handleEdit}
-            onCancel={() => setEditTarget(null)}
-            submitting={submitting}
-            submitLabel="Save Changes"
-          />
-        </Dialog>
-      )}
-
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteTarget(null)} />
-          <div className="relative z-10 bg-card border border-border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
-            <div className="flex items-start gap-4">
-              <div className="size-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
-                <AlertTriangle className="size-5 text-destructive" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground">Delete Source</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Are you sure you want to remove <span className="text-foreground font-medium">@{deleteTarget.username}</span>? This action cannot be undone.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2 mt-6">
-              <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(null)} disabled={submitting}>
-                Cancel
-              </Button>
-              <Button variant="destructive" size="sm" onClick={handleDelete} disabled={submitting}>
-                {submitting ? "Deleting…" : "Delete"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,23 +1,21 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { Shield, Users, Radio, Zap, Lightbulb, Database, ArrowRight } from "lucide-react";
-import { ECO_STAT } from "@/lib/ecosystem-colors";
+import { Users, Radio, Zap, Lightbulb, Database, FileText, Play, ArrowRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 async function getAdminStats() {
-  const [accounts, activeAccounts, events, ideas, tweets] = await Promise.all([
+  const [accounts, activeAccounts, events, ideas, tweets, byEco] = await Promise.all([
     supabase.from("accounts").select("id", { count: "exact" }),
     supabase.from("accounts").select("id", { count: "exact" }).eq("active", true),
-    supabase.from("events").select("id", { count: "exact" }),
+    supabase.from("events").select("id", { count: "exact" }).gte("created_at", new Date(Date.now() - 86400000).toISOString()),
     supabase.from("content_ideas").select("id", { count: "exact" }),
     supabase.from("tweets").select("id", { count: "exact" }),
-  ]);
-
-  const byEcosystem = await Promise.all([
-    supabase.from("accounts").select("id", { count: "exact" }).eq("ecosystem", "ronin"),
-    supabase.from("accounts").select("id", { count: "exact" }).eq("ecosystem", "immutable"),
-    supabase.from("accounts").select("id", { count: "exact" }).eq("ecosystem", "abstract"),
+    Promise.all([
+      supabase.from("accounts").select("id", { count: "exact" }).eq("ecosystem", "ronin"),
+      supabase.from("accounts").select("id", { count: "exact" }).eq("ecosystem", "immutable"),
+      supabase.from("accounts").select("id", { count: "exact" }).eq("ecosystem", "abstract"),
+    ]),
   ]);
 
   return {
@@ -26,171 +24,127 @@ async function getAdminStats() {
     events: events.count ?? 0,
     ideas: ideas.count ?? 0,
     tweets: tweets.count ?? 0,
-    ronin: byEcosystem[0].count ?? 0,
-    immutable: byEcosystem[1].count ?? 0,
-    abstract: byEcosystem[2].count ?? 0,
+    ronin: byEco[0].count ?? 0,
+    immutable: byEco[1].count ?? 0,
+    abstract: byEco[2].count ?? 0,
   };
 }
 
 export default async function AdminPage() {
   const stats = await getAdminStats();
+  const totalAccounts = stats.total;
 
-  const statCards = [
-    {
-      label: "Total Accounts",
-      value: stats.total,
-      icon: Users,
-      color: "text-blue-400",
-      bg: "bg-gradient-to-br from-blue-400/20 to-blue-400/5",
-      glow: "bg-blue-400",
-    },
-    {
-      label: "Active Accounts",
-      value: stats.active,
-      icon: Radio,
-      color: "text-green-400",
-      bg: "bg-gradient-to-br from-green-400/20 to-green-400/5",
-      glow: "bg-green-400",
-    },
-    {
-      label: "Total Events",
-      value: stats.events,
-      icon: Zap,
-      color: "text-amber-400",
-      bg: "bg-gradient-to-br from-amber-400/20 to-amber-400/5",
-      glow: "bg-amber-400",
-    },
-    {
-      label: "Tweets Collected",
-      value: stats.tweets,
-      icon: Database,
-      color: "text-violet-400",
-      bg: "bg-gradient-to-br from-violet-400/20 to-violet-400/5",
-      glow: "bg-violet-400",
-    },
-  ];
-
-  const quickLinks = [
-    {
-      href: "/admin/accounts",
-      label: "Manage Accounts",
-      description: "Add, edit, categorize, and prioritize X accounts by ecosystem",
-      icon: Users,
-      count: stats.total,
-      countLabel: "total accounts",
-      color: "text-blue-400",
-      bg: "bg-gradient-to-br from-blue-400/15 to-blue-400/5",
-    },
-    {
-      href: "/dashboard/sources",
-      label: "View Sources",
-      description: "See all tracked accounts in dashboard view",
-      icon: Radio,
-      count: stats.active,
-      countLabel: "active",
-      color: "text-green-400",
-      bg: "bg-gradient-to-br from-green-400/15 to-green-400/5",
-    },
-    {
-      href: "/dashboard/events",
-      label: "Events",
-      description: "Browse detected ecosystem events",
-      icon: Zap,
-      count: stats.events,
-      countLabel: "events",
-      color: "text-amber-400",
-      bg: "bg-gradient-to-br from-amber-400/15 to-amber-400/5",
-    },
-    {
-      href: "/dashboard/ideas",
-      label: "Content Ideas",
-      description: "Manage generated content opportunities",
-      icon: Lightbulb,
-      count: stats.ideas,
-      countLabel: "ideas",
-      color: "text-violet-400",
-      bg: "bg-gradient-to-br from-violet-400/15 to-violet-400/5",
-    },
+  const kpis = [
+    { label: "TOTAL ACCOUNTS",   value: stats.total,  icon: Users,    color: "#06b6d4", bg: "rgba(6,182,212,0.12)",   sub: "all ecosystems" },
+    { label: "ACTIVE ACCOUNTS",  value: stats.active, icon: Radio,    color: "#4ade80", bg: "rgba(74,222,128,0.08)",  sub: "currently tracked" },
+    { label: "EVENTS · 24H",     value: stats.events, icon: Zap,      color: "#f59e0b", bg: "rgba(245,158,11,0.12)",  sub: "last 24 hours" },
+    { label: "TWEETS COLLECTED", value: stats.tweets, icon: Database, color: "#8b5cf6", bg: "rgba(139,92,246,0.12)",  sub: "all-time" },
   ];
 
   const ecosystems = [
-    { label: "Ronin", count: stats.ronin, color: ECO_STAT.ronin, dot: "bg-sky-400", glow: "bg-sky-400" },
-    { label: "Immutable", count: stats.immutable, color: ECO_STAT.immutable, dot: "bg-purple-400", glow: "bg-purple-400" },
-    { label: "Abstract", count: stats.abstract, color: ECO_STAT.abstract, dot: "bg-emerald-400", glow: "bg-emerald-400" },
+    { key: "ronin",     label: "Ronin",     count: stats.ronin,     color: "#3b82f6" },
+    { key: "immutable", label: "Immutable", count: stats.immutable,  color: "#a855f7" },
+    { key: "abstract",  label: "Abstract",  count: stats.abstract,   color: "#10b981" },
+  ];
+
+  const ACTION_TONE_COLORS: Record<string, string> = {
+    ronin:  "rgba(59,130,246,0.45)",
+    signal: "rgba(74,222,128,0.45)",
+    amber:  "rgba(245,158,11,0.45)",
+    violet: "rgba(139,92,246,0.45)",
+  };
+
+  const actions = [
+    { href: "/admin/accounts",    icon: Users,     tone: "ronin",   title: "Manage accounts",  desc: "Add, edit, categorize, and prioritize X accounts by ecosystem",          note: `${stats.total} total · 3 ecosystems` },
+    { href: "/dashboard/sources", icon: Radio,     tone: "signal",  title: "View sources",     desc: "See all tracked accounts in dashboard view",                           note: `${stats.active} active` },
+    { href: "/dashboard/events",  icon: Zap,       tone: "amber",   title: "Browse events",    desc: "Inspect detected ecosystem events with full context",                    note: `${stats.events} events · 24h` },
+    { href: "/dashboard/ideas",   icon: Lightbulb, tone: "violet",  title: "Content ideas",    desc: "Manage generated content opportunities",                                 note: `${stats.ideas} ideas` },
+    { href: "/dashboard/summaries",icon: FileText,  tone: "ronin",   title: "Intel reports",    desc: "Review auto-summarized ecosystem briefings",                            note: "Updated every 4h" },
+    { href: "/admin/pipeline",    icon: Play,      tone: "signal",  title: "Run pipeline",     desc: "Collect → process → summarize → ideate, end-to-end",                   note: "Manual trigger" },
   ];
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="size-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-          <Shield className="size-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-black text-foreground">Admin Panel</h1>
-          <p className="text-sm text-muted-foreground">Configure and manage your Creator OS</p>
-        </div>
+    <div className="cos-page space-y-4">
+      <div className="cos-page-head">
+        <div className="cos-eyebrow">CONTROL</div>
+        <h1 className="cos-page-title">Admin panel</h1>
+        <p className="cos-page-sub">System health, account distribution, and direct access to every operator surface.</p>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((card) => (
-          <div key={card.label} className="relative bg-card border border-border rounded-xl p-5 overflow-hidden">
-            <div className={`absolute -top-4 -right-4 size-20 rounded-full blur-2xl opacity-20 ${card.glow}`} />
-            <div className="relative">
-              <div className={`size-10 rounded-xl ${card.bg} flex items-center justify-center mb-4`}>
-                <card.icon className={`size-5 ${card.color}`} />
-              </div>
-              <p className={`text-4xl font-black ${card.color}`}>{card.value}</p>
-              <p className="text-xs font-medium text-muted-foreground mt-1.5">{card.label}</p>
+      {/* KPI grid */}
+      <div className="cos-kpi-grid">
+        {kpis.map((kpi) => (
+          <div
+            key={kpi.label}
+            style={{
+              background: `linear-gradient(135deg, ${kpi.bg} 0%, var(--surface) 65%)`,
+              border: "1px solid var(--hairline)",
+              borderRadius: 10,
+              padding: "18px 20px 16px",
+            }}
+          >
+            <div style={{
+              fontFamily: "var(--font-geist-mono)", fontSize: 10, fontWeight: 700,
+              letterSpacing: "0.1em", textTransform: "uppercase" as const,
+              color: "var(--fg-4)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14,
+            }}>
+              <kpi.icon style={{ width: 13, height: 13 }} />
+              {kpi.label}
+            </div>
+            <div style={{ fontSize: 46, fontWeight: 700, color: kpi.color, lineHeight: 1, marginBottom: 10 }}>
+              {kpi.value}
+            </div>
+            <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, color: "var(--fg-4)" }}>
+              {kpi.sub}
             </div>
           </div>
         ))}
       </div>
 
-      {/* Ecosystem breakdown */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Ecosystem distribution */}
+      <div className="cos-divider">Ecosystem distribution</div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {ecosystems.map((eco) => {
-          const [textColor, bgColor] = eco.color.split(" ");
+          const share = totalAccounts > 0 ? Math.round((eco.count / totalAccounts) * 100) : 0;
           return (
-            <div key={eco.label} className={`relative rounded-xl p-3 md:p-5 overflow-hidden border border-border ${bgColor}`}>
-              <div className={`absolute -top-3 -right-3 size-14 rounded-full blur-xl opacity-30 ${eco.glow}`} />
-              <div className="relative">
-                <div className="flex items-center gap-1.5 mb-2 md:mb-3">
-                  <div className={`size-2 shrink-0 rounded-full ${eco.dot}`} />
-                  <span className="text-[10px] md:text-xs font-bold uppercase tracking-wide md:tracking-widest text-muted-foreground truncate">{eco.label}</span>
+            <div key={eco.key} className={`cos-eco-card ${eco.key}`}>
+              <div className="cos-eco-label">
+                <span className="dot" />
+                {eco.label}
+              </div>
+              <div className="cos-eco-count" style={{ color: eco.color }}>{eco.count} <span>accounts</span></div>
+              <div style={{ marginTop: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--font-geist-mono)", fontSize: 10.5, color: "var(--fg-4)", marginBottom: 4 }}>
+                  <span>Share</span>
+                  <span style={{ color: eco.color }}>{share}%</span>
                 </div>
-                <p className={`text-2xl md:text-4xl font-black ${textColor}`}>{eco.count}</p>
-                <p className="text-xs text-muted-foreground mt-1">accounts</p>
+                <div className="cos-pipe-track">
+                  <div className="cos-pipe-fill" style={{ width: `${share}%`, background: eco.color }} />
+                </div>
+              </div>
+              <div className="cos-eco-foot">
+                <span>{eco.count} sources</span>
+                <span style={{ color: eco.color }}>{share}%</span>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Quick links */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {quickLinks.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="bg-card border border-border rounded-xl p-5 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20 transition-all duration-200 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className={`size-10 rounded-xl ${link.bg} flex items-center justify-center shrink-0`}>
-                <link.icon className={`size-5 ${link.color}`} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
-                  <p className="font-bold text-foreground">{link.label}</p>
-                  <ArrowRight className={`size-4 text-muted-foreground group-hover:${link.color} transition-colors`} />
-                </div>
-                <p className="text-sm text-muted-foreground">{link.description}</p>
-                <p className={`text-sm font-black mt-2 ${link.color}`}>
-                  {link.count} <span className="font-normal text-xs text-muted-foreground">{link.countLabel}</span>
-                </p>
-              </div>
+      {/* Quick actions */}
+      <div className="cos-divider">Quick actions</div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {actions.map((action) => (
+          <Link key={action.href} href={action.href} className="cos-action-card" style={{ borderTop: `2px solid ${ACTION_TONE_COLORS[action.tone] ?? "rgba(255,255,255,0.12)"}` }}>
+            <div className={`cos-action-icon ${action.tone}`}>
+              <action.icon style={{ width: 16, height: 16 }} />
             </div>
+            <div className="cos-action-meta">
+              <div className="cos-action-title">{action.title}</div>
+              <div className="cos-action-desc">{action.desc}</div>
+              <div className="cos-action-note">{action.note}</div>
+            </div>
+            <ArrowRight className="cos-action-arrow" />
           </Link>
         ))}
       </div>

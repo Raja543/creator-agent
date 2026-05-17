@@ -11,13 +11,12 @@ export default async function SummariesPage() {
     .limit(50);
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-black text-foreground">
-          <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Intel Reports</span>
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {summaries?.length ?? 0} report{summaries?.length !== 1 ? "s" : ""} generated — updated every 4 hours
+    <div className="cos-page space-y-4">
+      <div className="cos-page-head">
+        <div className="cos-eyebrow">INTEL · AUTO-GENERATED · 4H CYCLE</div>
+        <h1 className="cos-page-title">Reports</h1>
+        <p className="cos-page-sub">
+          {summaries?.length ?? 0} report{summaries?.length !== 1 ? "s" : ""} generated synthesized ecosystem briefings from collection windows.
         </p>
       </div>
 

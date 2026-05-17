@@ -24,15 +24,12 @@ export default async function PipelinePage() {
   ) as Record<PipelineStatus, typeof ideas>;
 
   return (
-    <div className="p-4 md:p-6 h-full flex flex-col">
-      <div className="mb-6">
-        <h1 className="text-2xl font-black text-foreground">
-          <span className="bg-gradient-to-r from-cyan-400 to-cyan-400/60 bg-clip-text text-transparent">Pipeline</span>
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          <span className="hidden md:inline">Drag cards between columns to update status</span>
-          <span className="md:hidden">Tap a stage to view and move cards</span>
-        </p>
+    <div className="cos-page space-y-4">
+      <div className="cos-page-head">
+        <div className="cos-eyebrow">Content · Kanban</div>
+        <h1 className="cos-page-title">Pipeline</h1>
+        <p className="cos-page-sub hidden md:block">Drag cards between columns to update status.</p>
+        <p className="cos-page-sub md:hidden">Tap a stage to view and move cards.</p>
       </div>
       <PipelineClient stages={STAGES} initialGrouped={grouped ?? {}} />
     </div>

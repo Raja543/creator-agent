@@ -17,12 +17,11 @@ export default async function AdminPipelinePage() {
     .eq("processed", false);
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-3xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Intelligence Pipeline</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Run each step manually or trigger the full pipeline at once
-        </p>
+    <div className="cos-page space-y-4">
+      <div className="cos-page-head">
+        <div className="cos-eyebrow">OPERATIONS · MANUAL TRIGGER</div>
+        <h1 className="cos-page-title">Run the intelligence pipeline</h1>
+        <p className="cos-page-sub">Run end-to-end or step by step. Each step can be triggered individually.</p>
       </div>
 
       <PipelineControl

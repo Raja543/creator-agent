@@ -17,9 +17,8 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -184,12 +183,10 @@ function SidebarContent({ onClose, collapsed, onToggleCollapse }: { onClose?: ()
 
 export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("sidebar-collapsed");
-    if (stored === "true") setCollapsed(true);
-  }, []);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("sidebar-collapsed") === "true";
+  });
 
   function toggleCollapsed() {
     const next = !collapsed;
@@ -202,7 +199,7 @@ export function Sidebar() {
       {/* ── Desktop sidebar ── */}
       <aside
         className={cn(
-          "hidden md:flex shrink-0 flex-col bg-sidebar border-r border-sidebar-border h-screen sticky top-0 transition-all duration-200",
+          "hidden md:flex shrink-0 flex-col bg-sidebar border-r border-sidebar-border h-screen transition-all duration-200",
           collapsed ? "w-14" : "w-56"
         )}
       >
@@ -218,32 +215,20 @@ export function Sidebar() {
         <Menu className="size-4" />
       </button>
 
-      {/* ── Mobile: backdrop + drawer ── */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <>
-            <motion.div
-              key="backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black/60 z-40 md:hidden"
-              onClick={() => setMobileOpen(false)}
-            />
-            <motion.aside
-              key="drawer"
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 260 }}
-              className="fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-sidebar border-r border-sidebar-border md:hidden"
-            >
-              <SidebarContent onClose={() => setMobileOpen(false)} />
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+      {/* ── Mobile: backdrop ── */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* ── Mobile: drawer ── */}
+      {mobileOpen && (
+        <aside className="fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-sidebar border-r border-sidebar-border md:hidden">
+          <SidebarContent onClose={() => setMobileOpen(false)} />
+        </aside>
+      )}
     </>
   );
 }

@@ -33,17 +33,19 @@ export default async function SourcesPage({ searchParams }: PageProps) {
   const sources = data ?? [];
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center gap-3 border-b border-border pb-5">
+    <div className="cos-page space-y-4">
+      <div className="cos-page-head">
+        <div className="cos-eyebrow">ACCOUNTS</div>
+        <h1 className="cos-page-title">Sources</h1>
+        <p className="cos-page-sub">Tracked accounts across all monitored ecosystems. {sources.length} active.</p>
+      </div>
+
+      <div className="cos-filter-bar">
         {ECOSYSTEM_TABS.map((tab) => (
           <Link
             key={tab.value}
             href={tab.value === "all" ? "/dashboard/sources" : `/dashboard/sources?ecosystem=${tab.value}`}
-            className={`text-sm font-medium px-3 py-1.5 rounded-lg transition-colors ${
-              activeFilter === tab.value
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
-            }`}
+            className={`cos-fchip ${activeFilter === tab.value ? "active" : ""}`}
           >
             {tab.label}
           </Link>
@@ -51,7 +53,7 @@ export default async function SourcesPage({ searchParams }: PageProps) {
       </div>
 
       {error && (
-        <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg px-4 py-3">
+        <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "var(--rose-dim)", color: "var(--rose)", border: "1px solid rgba(244,63,94,.2)" }}>
           Failed to load sources: {error.message}
         </div>
       )}

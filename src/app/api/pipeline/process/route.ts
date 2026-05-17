@@ -4,8 +4,8 @@ import { isCronAuthorized } from "@/lib/cron-auth";
 
 export const maxDuration = 300;
 
-const IMPORTANCE_THRESHOLD = 4;
-const BATCH_SIZE = 15;
+const IMPORTANCE_THRESHOLD = 5;
+const BATCH_SIZE = 25;
 
 export function GET(request: Request) {
   if (!isCronAuthorized(request)) {
@@ -14,12 +14,11 @@ export function GET(request: Request) {
   return POST();
 }
 
-async function classifyWithRetry(content: string) {
-  const result = await classifyTweet(content);
+async function classifyWithRetry(content: string, context?: { ecosystem?: string; category?: string }) {
+  const result = await classifyTweet(content, context);
   if (result) return result;
-  // One retry after a short pause
   await new Promise((r) => setTimeout(r, 2000));
-  return classifyTweet(content);
+  return classifyTweet(content, context);
 }
 
 export async function POST() {
@@ -46,7 +45,9 @@ export async function POST() {
       continue;
     }
 
-    const classification = await classifyWithRetry(tweet.content);
+    const ecosystem = (tweet.raw_data as Record<string, string> | null)?.account_ecosystem ?? undefined;
+    const category = (tweet.raw_data as Record<string, string> | null)?.account_category ?? undefined;
+    const classification = await classifyWithRetry(tweet.content, { ecosystem, category });
 
     await supabase.from("tweets").update({ processed: true }).eq("id", tweet.id);
     processed++;
@@ -61,12 +62,12 @@ export async function POST() {
       continue;
     }
 
-    const ecosystem = (tweet.raw_data as Record<string, string> | null)?.account_ecosystem ?? null;
+    const eventEcosystem = ecosystem ?? null;
 
     const { data: existingEvents } = await supabase
       .from("events")
       .select("id, title, source_tweets, keywords")
-      .eq("ecosystem", ecosystem)
+      .eq("ecosystem", eventEcosystem)
       .eq("category", classification.category)
       .gte("created_at", new Date(Date.now() - 86400000).toISOString())
       .order("created_at", { ascending: false })
@@ -102,7 +103,7 @@ export async function POST() {
         .insert({
           title: classification.summary,
           summary: classification.summary,
-          ecosystem,
+          ecosystem: eventEcosystem,
           category: classification.category,
           importance_score: classification.importance_score,
           keywords: classification.keywords,
@@ -117,13 +118,13 @@ export async function POST() {
         eventsCreated++;
         await supabase.from("activities").insert({
           type: "event_detected",
-          message: `New event [${ecosystem} | ${classification.category} | score ${classification.importance_score}]: ${classification.summary}`,
-          metadata: { event_id: newEvent.id, score: classification.importance_score, ecosystem },
+          message: `New event [${eventEcosystem} | ${classification.category} | score ${classification.importance_score}]: ${classification.summary}`,
+          metadata: { event_id: newEvent.id, score: classification.importance_score, ecosystem: eventEcosystem },
         });
       }
     }
 
-    await new Promise((r) => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 2000));
   }
 
   return Response.json({

@@ -34,20 +34,17 @@ export default async function EventsPage({ searchParams }: PageProps) {
   const events: Event[] = data ?? [];
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-black text-foreground">
-          <span className="bg-gradient-to-r from-amber-400 to-amber-400/60 bg-clip-text text-transparent">Events</span>
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {events.length} detected event{events.length !== 1 ? "s" : ""} from tracked sources
-        </p>
+    <div className="cos-page space-y-4">
+      <div className="cos-page-head">
+        <div className="cos-eyebrow">SIGNAL · {events.length} EVENTS</div>
+        <h1 className="cos-page-title">Events</h1>
+        <p className="cos-page-sub">Detected from tracked sources. Scored on engagement potential.</p>
       </div>
 
       <EventsFilters />
 
       {error && (
-        <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg px-4 py-3">
+        <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "var(--rose-dim)", color: "var(--rose)", border: "1px solid rgba(244,63,94,.2)" }}>
           Failed to load events: {error.message}
         </div>
       )}

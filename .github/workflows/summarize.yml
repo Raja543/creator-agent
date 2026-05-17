@@ -1,0 +1,19 @@
+name: Generate Ecosystem Summary
+
+on:
+  schedule:
+    - cron: "10 */4 * * *"  # every 4 hours at :10 (after collect finishes)
+  workflow_dispatch:
+
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Generate ecosystem intelligence report
+        run: |
+          curl -sL -X GET "${{ secrets.APP_URL }}/api/pipeline/summarize" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            --max-time 120 \
+            -w "\nStatus: %{http_code}"

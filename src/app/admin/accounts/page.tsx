@@ -1,6 +1,8 @@
 import { supabase } from "@/lib/supabase";
 import { AdminAccountsClient } from "@/components/admin/AdminAccountsClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminAccountsPage() {
   const { data: accounts } = await supabase
     .from("accounts")
@@ -9,12 +11,11 @@ export default async function AdminAccountsPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Manage Accounts</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Add and categorize all X accounts you want to track. Organize by ecosystem, type, and priority.
-        </p>
+    <div className="cos-page space-y-4">
+      <div className="cos-page-head">
+        <div className="cos-eyebrow">Admin · Sources</div>
+        <h1 className="cos-page-title">Manage Accounts</h1>
+        <p className="cos-page-sub">Add and categorize all X accounts you want to track. Organize by ecosystem, type, and priority.</p>
       </div>
       <AdminAccountsClient initialAccounts={accounts ?? []} />
     </div>

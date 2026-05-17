@@ -1,40 +1,27 @@
-name: Pipeline Automation
+name: Collect & Process Events
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "*/30 * * * *"  # every 30 min
   workflow_dispatch:
 
 jobs:
-  pipeline:
+  collect:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Collect tweets from Nitter RSS
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: node scripts/collect.mjs
+
       - name: Process tweets into events
         run: |
           curl -sL -X GET "${{ secrets.APP_URL }}/api/pipeline/process" \
             -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
             --max-time 300 \
             -w "\nStatus: %{http_code}"
-
-      - name: Wait for rate limit to recover
-        run: sleep 60
-
-      - name: Generate summary + ideas (every 4 hours)
-        run: |
-          HOUR=$(date -u +%-H)
-          MINUTE=$(date -u +%-M)
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || ([ "$MINUTE" -lt 16 ] && [ $(($HOUR % 4)) -eq 0 ]); then
-            echo "Running summary and ideas generation..."
-            curl -sL -X GET "${{ secrets.APP_URL }}/api/pipeline/summarize" \
-              -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
-              --max-time 120 \
-              -w "\nStatus: %{http_code}"
-            curl -sL -X GET "${{ secrets.APP_URL }}/api/pipeline/ideas" \
-              -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
-              --max-time 120 \
-              -w "\nStatus: %{http_code}"
-          else
-            echo "Skipping summary/ideas (runs at 0:00, 4:00, 8:00, 12:00, 16:00, 20:00 UTC)"
-          fi

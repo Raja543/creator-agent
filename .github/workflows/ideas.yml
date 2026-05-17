@@ -1,0 +1,19 @@
+name: Generate Content Ideas
+
+on:
+  schedule:
+    - cron: "5 * * * *"  # every hour at :05 (after collect finishes)
+  workflow_dispatch:
+
+jobs:
+  ideas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Generate content ideas from events
+        run: |
+          curl -sL -X GET "${{ secrets.APP_URL }}/api/pipeline/ideas" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            --max-time 120 \
+            -w "\nStatus: %{http_code}"

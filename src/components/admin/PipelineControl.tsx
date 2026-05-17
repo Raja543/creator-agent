@@ -2,17 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Radio,
-  Cpu,
-  FileText,
-  Lightbulb,
-  Play,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  Zap,
-  Clock,
-  Database,
+  Radio, Cpu, FileText, Lightbulb, Play,
+  CheckCircle2, XCircle, Loader2, Zap, Database,
 } from "lucide-react";
 
 interface Stats {
@@ -24,55 +15,61 @@ interface Stats {
 }
 
 type StepStatus = "idle" | "running" | "done" | "error";
-
-interface StepResult {
-  status: StepStatus;
-  message: string;
-}
+interface StepResult { status: StepStatus; message: string; }
 
 const STEPS = [
-  {
-    id: "collect",
-    label: "Collect Tweets",
-    description: "Scrape Nitter RSS feeds for all active accounts",
-    icon: Radio,
-    endpoint: "/api/pipeline/collect",
-    color: "text-blue-400",
-    bg: "bg-blue-400/10",
-  },
-  {
-    id: "process",
-    label: "Process Events",
-    description: "Run Groq AI classification on unprocessed tweets",
-    icon: Cpu,
-    endpoint: "/api/pipeline/process",
-    color: "text-violet-400",
-    bg: "bg-violet-400/10",
-  },
-  {
-    id: "summarize",
-    label: "Generate Summary",
-    description: "Create ecosystem intelligence report from last 4h events",
-    icon: FileText,
-    endpoint: "/api/pipeline/summarize",
-    color: "text-cyan-400",
-    bg: "bg-cyan-400/10",
-  },
-  {
-    id: "ideas",
-    label: "Generate Ideas",
-    description: "Create content opportunities from today's top events",
-    icon: Lightbulb,
-    endpoint: "/api/pipeline/ideas",
-    color: "text-amber-400",
-    bg: "bg-amber-400/10",
-  },
+  { id: "collect",   num: "01", tone: "collect", label: "Collect tweets",   desc: "Scrape Nitter RSS feeds for all active accounts.",                        icon: Radio,    endpoint: "/api/pipeline/collect",   stat: (s: Stats) => `~${s.totalTweets} tweets` },
+  { id: "process",   num: "02", tone: "process", label: "Process events",   desc: "Run classifier on unprocessed tweets: score, dedupe, cluster.",          icon: Cpu,      endpoint: "/api/pipeline/process",   stat: (s: Stats) => `${s.unprocessedTweets} unprocessed` },
+  { id: "summarize", num: "03", tone: "summary", label: "Generate summary", desc: "Synthesize 4h ecosystem briefing for the report feed.",                   icon: FileText, endpoint: "/api/pipeline/summarize", stat: () => "~8s · Gemini Flash" },
+  { id: "ideas",     num: "04", tone: "ideate",  label: "Generate ideas",   desc: "Create content opportunities from top-scored events.",                    icon: Lightbulb,endpoint: "/api/pipeline/ideas",     stat: (s: Stats) => `${s.totalIdeas} ideas total` },
 ];
+
+const TONE_COLORS: Record<string, string> = {
+  collect: "#3b82f6",
+  process: "#8b5cf6",
+  summary: "#06b6d4",
+  ideate:  "#f59e0b",
+};
+
+const TONE_BG: Record<string, string> = {
+  collect: "rgba(59,130,246,0.15)",
+  process: "rgba(139,92,246,0.15)",
+  summary: "rgba(6,182,212,0.15)",
+  ideate:  "rgba(245,158,11,0.15)",
+};
+
+const TONE_BORDER: Record<string, string> = {
+  collect: "rgba(59,130,246,0.35)",
+  process: "rgba(139,92,246,0.35)",
+  summary: "rgba(6,182,212,0.35)",
+  ideate:  "rgba(245,158,11,0.35)",
+};
+
+function parseUTC(iso: string): Date {
+  const hasZone = iso.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(iso);
+  return new Date(hasZone ? iso : iso + "Z");
+}
+
+function timeAgo(iso: string) {
+  const diff = Date.now() - parseUTC(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 60) return `${m}m ago`;
+  return `${Math.floor(m / 60)}h ago`;
+}
+
+function formatResult(id: string, data: Record<string, unknown>): string {
+  if (id === "collect")   return `Collected ${data.collected ?? 0} tweets from ${data.accounts ?? 0} accounts (${data.skipped ?? 0} filtered)`;
+  if (id === "process")   return `${data.processed ?? 0} processed → ${data.events_created ?? 0} events, ${data.clustered ?? 0} clustered, ${data.groq_failed ?? 0} AI failures`;
+  if (id === "summarize") return `Summary generated from ${data.event_count ?? 0} events`;
+  if (id === "ideas")     return `${data.ideas_created ?? 0} content ideas created`;
+  return JSON.stringify(data);
+}
 
 export function PipelineControl({ stats: initialStats }: { stats: Stats }) {
   const [stats, setStats] = useState<Stats>(initialStats);
   const [results, setResults] = useState<Record<string, StepResult>>({});
   const [fullRunning, setFullRunning] = useState(false);
+  const [progress, setProgress] = useState(-1);
 
   const refreshStats = useCallback(async () => {
     try {
@@ -81,7 +78,6 @@ export function PipelineControl({ stats: initialStats }: { stats: Stats }) {
     } catch {}
   }, []);
 
-  // Poll every 30s while on the page
   useEffect(() => {
     const id = setInterval(refreshStats, 30_000);
     return () => clearInterval(id);
@@ -93,156 +89,193 @@ export function PipelineControl({ stats: initialStats }: { stats: Stats }) {
       const res = await fetch(endpoint, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed");
-      const msg = data.message ?? formatResult(id, data);
-      setResults((r) => ({ ...r, [id]: { status: "done", message: msg } }));
+      setResults((r) => ({ ...r, [id]: { status: "done", message: data.message ?? formatResult(id, data) } }));
       await refreshStats();
     } catch (err) {
-      setResults((r) => ({
-        ...r,
-        [id]: { status: "error", message: err instanceof Error ? err.message : "Error" },
-      }));
+      setResults((r) => ({ ...r, [id]: { status: "error", message: err instanceof Error ? err.message : "Error" } }));
     }
   }
 
   async function runAll() {
     setFullRunning(true);
-    for (const step of STEPS) {
-      await runStep(step.endpoint, step.id);
-      // Small gap between steps
-      await new Promise((r) => setTimeout(r, 1000));
+    setProgress(0);
+    for (let i = 0; i < STEPS.length; i++) {
+      setProgress(i);
+      await runStep(STEPS[i].endpoint, STEPS[i].id);
+      if (i < STEPS.length - 1) await new Promise((r) => setTimeout(r, 1000));
     }
+    setProgress(-1);
     setFullRunning(false);
   }
 
   const isAnyRunning = fullRunning || Object.values(results).some((r) => r.status === "running");
 
   return (
-    <div className="space-y-5">
-      {/* Stats bar */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: "Total Tweets", value: stats.totalTweets, icon: Database },
-          { label: "Unprocessed", value: stats.unprocessedTweets, icon: Cpu, highlight: stats.unprocessedTweets > 0 },
-          { label: "Events", value: stats.totalEvents, icon: Zap },
-          { label: "Ideas", value: stats.totalIdeas, icon: Lightbulb },
-        ].map((s) => (
-          <div key={s.label} className={`bg-card border rounded-xl p-4 ${s.highlight ? "border-amber-400/30" : "border-border"}`}>
-            <div className="flex items-center gap-2 mb-1">
-              <s.icon className={`size-3.5 ${s.highlight ? "text-amber-400" : "text-muted-foreground"}`} />
-              <span className="text-xs text-muted-foreground">{s.label}</span>
+    <div className="space-y-4">
+      {/* Stats */}
+      <div className="cos-kpi-grid">
+        {([
+          { label: "TOTAL TWEETS",    value: stats.totalTweets,        icon: Database,  color: "#8b5cf6", bg: "rgba(139,92,246,0.12)", sub: "all-time" },
+          { label: "UNPROCESSED",     value: stats.unprocessedTweets,  icon: Cpu,       color: "#f59e0b", bg: "rgba(245,158,11,0.12)", sub: "awaiting classifier" },
+          { label: "EVENTS SCORED",   value: stats.totalEvents,        icon: Zap,       color: "#06b6d4", bg: "rgba(6,182,212,0.12)",  sub: "last 24h" },
+          { label: "IDEAS GENERATED", value: stats.totalIdeas,         icon: Lightbulb, color: "#4ade80", bg: "rgba(74,222,128,0.08)", sub: "last 7 days" },
+        ] as const).map((s) => (
+          <div
+            key={s.label}
+            style={{
+              background: `linear-gradient(135deg, ${s.bg} 0%, var(--surface) 65%)`,
+              border: "1px solid var(--hairline)",
+              borderRadius: 10,
+              padding: "18px 20px 16px",
+            }}
+          >
+            <div style={{
+              fontFamily: "var(--font-geist-mono)", fontSize: 10, fontWeight: 700,
+              letterSpacing: "0.1em", textTransform: "uppercase" as const,
+              color: "var(--fg-4)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14,
+            }}>
+              <s.icon style={{ width: 13, height: 13 }} />
+              {s.label}
             </div>
-            <p className={`text-2xl font-bold ${s.highlight ? "text-amber-400" : "text-foreground"}`}>{s.value}</p>
+            <div style={{ fontSize: 46, fontWeight: 700, color: s.color, lineHeight: 1, marginBottom: 10 }}>
+              {s.value}
+            </div>
+            <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, color: "var(--fg-4)" }}>
+              {s.sub}
+            </div>
           </div>
         ))}
       </div>
 
       {stats.lastSummaryAt && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Clock className="size-3.5" />
-          Last summary: {formatTime(stats.lastSummaryAt)}
-        </div>
+        <p style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10.5, color: "var(--fg-4)" }}>
+          Last summary: {timeAgo(stats.lastSummaryAt)}
+        </p>
       )}
 
-      {/* Run all button */}
-      <button
-        onClick={runAll}
-        disabled={isAnyRunning}
-        className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
+      {/* Run full pipeline card */}
+      <div
+        className="cos-card"
+        style={{
+          padding: 18,
+          background: "linear-gradient(180deg, color-mix(in srgb, var(--signal) 6%, transparent), var(--surface) 60%)",
+          borderColor: "rgba(74,222,128,.2)",
+        }}
       >
-        {fullRunning ? (
-          <><Loader2 className="size-4 shrink-0 animate-spin" /> Running full pipeline...</>
-        ) : (
-          <>
-            <Play className="size-4 shrink-0" />
-            <span>Run Full Pipeline</span>
-            <span className="hidden sm:inline text-primary-foreground/70 text-sm">
-              (Collect → Process → Summarize → Ideas)
-            </span>
-          </>
+        <div className="flex items-center gap-4">
+          <div
+            style={{ width: 44, height: 44, borderRadius: 8, background: "var(--signal-dim)", border: "1px solid rgba(74,222,128,.2)", color: "var(--signal)", display: "grid", placeItems: "center", flexShrink: 0 }}
+          >
+            <Play style={{ width: 18, height: 18 }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)", marginBottom: 2 }}>Run full pipeline</div>
+            <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, color: "var(--fg-4)" }}>
+              collect → process → summarize → ideate
+            </div>
+          </div>
+          <button
+            onClick={runAll}
+            disabled={isAnyRunning}
+            className="cos-btn-primary"
+            style={{ padding: "11px 22px", fontSize: 13, fontWeight: 700 }}
+          >
+            {fullRunning ? (
+              <><Loader2 style={{ width: 13, height: 13 }} className="animate-spin" /> Running {progress + 1}/4…</>
+            ) : (
+              <><Play style={{ width: 13, height: 13 }} /> Run all</>
+            )}
+          </button>
+        </div>
+        {progress >= 0 && (
+          <div style={{ marginTop: 14, height: 3, background: "var(--surface-2)", borderRadius: 99, overflow: "hidden" }}>
+            <div
+              style={{
+                height: "100%",
+                background: "var(--signal)",
+                width: `${Math.min(100, ((progress + 1) / 4) * 100)}%`,
+                transition: "width 600ms ease",
+              }}
+            />
+          </div>
         )}
-      </button>
+      </div>
 
       {/* Individual steps */}
-      <div className="space-y-3">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Or run individually</p>
-        {STEPS.map((step) => {
+      <div className="cos-divider">Or run a single step</div>
+      <div className="space-y-2">
+        {STEPS.map((step, i) => {
           const result = results[step.id];
           const isRunning = result?.status === "running";
-          return (
-            <div key={step.id} className="bg-card border border-border rounded-xl p-4">
-              <div className="flex items-start gap-4">
-                <div className={`size-9 rounded-lg ${step.bg} flex items-center justify-center shrink-0`}>
-                  <step.icon className={`size-4 ${step.color}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-foreground text-sm">{step.label}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{step.description}</p>
-                    </div>
-                    <button
-                      onClick={() => runStep(step.endpoint, step.id)}
-                      disabled={isAnyRunning}
-                      className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-muted border border-border rounded-lg text-xs text-foreground hover:border-border/60 transition-colors disabled:opacity-50"
-                    >
-                      {isRunning ? (
-                        <><Loader2 className="size-3 animate-spin" /> Running</>
-                      ) : (
-                        <><Play className="size-3" /> Run</>
-                      )}
-                    </button>
-                  </div>
+          const isDone = result?.status === "done";
+          const color = TONE_COLORS[step.tone];
+          const bg = TONE_BG[step.tone];
+          const borderColor = TONE_BORDER[step.tone];
 
+          return (
+            <div key={step.id}>
+              <div
+                className={`cos-runner-step ${isDone ? "done" : ""}`}
+                style={{ borderLeft: `3px solid ${isDone ? "rgba(74,222,128,0.5)" : (borderColor ?? "var(--hairline)")}` }}
+              >
+                <div className="cos-step-num" style={isDone ? undefined : { color, background: bg, border: `1px solid ${borderColor}` }}>
+                  {isDone ? "✓" : step.num}
+                </div>
+                <div className="cos-step-info">
+                  <h4 style={isRunning ? { color: "var(--signal)" } : undefined}>{step.label}</h4>
+                  <p>{step.desc}</p>
                   {result && result.status !== "running" && (
-                    <div className={`flex items-start gap-1.5 mt-2 text-xs ${result.status === "done" ? "text-green-400" : "text-destructive"}`}>
-                      {result.status === "done" ? (
-                        <CheckCircle2 className="size-3.5 mt-0.5 shrink-0" />
+                    <div
+                      className="flex items-center gap-1.5 mt-2"
+                      style={{ fontSize: 11.5, color: isDone ? "var(--signal)" : "var(--rose)" }}
+                    >
+                      {isDone ? (
+                        <CheckCircle2 style={{ width: 12, height: 12, flexShrink: 0 }} />
                       ) : (
-                        <XCircle className="size-3.5 mt-0.5 shrink-0" />
+                        <XCircle style={{ width: 12, height: 12, flexShrink: 0 }} />
                       )}
                       {result.message}
                     </div>
                   )}
                 </div>
+                <div className="cos-step-stat">
+                  <span style={{ color, fontFamily: "var(--font-geist-mono)", fontSize: 11, fontWeight: 600 }}>{step.stat(stats)}</span>
+                  <button
+                    onClick={() => runStep(step.endpoint, step.id)}
+                    disabled={isAnyRunning}
+                    className="cos-btn-ghost"
+                    style={{ fontSize: 10.5 }}
+                  >
+                    {isRunning ? (
+                      <><Loader2 style={{ width: 11, height: 11 }} className="animate-spin" /> Running</>
+                    ) : (
+                      <><Play style={{ width: 11, height: 11 }} /> Run</>
+                    )}
+                  </button>
+                </div>
               </div>
+              {i < STEPS.length - 1 && <div className="cos-connector" />}
             </div>
           );
         })}
       </div>
 
       {/* How it works */}
-      <div className="bg-muted/30 border border-border rounded-xl p-5 space-y-3">
-        <p className="text-sm font-medium text-foreground">How the pipeline works</p>
-        <div className="space-y-2 text-xs text-muted-foreground">
-          <p><span className="text-blue-400 font-medium">1. Collect</span> — Hits Nitter RSS feeds for all 64 accounts. Filters noise (GM posts, giveaways). Stores new tweets in Supabase.</p>
-          <p><span className="text-violet-400 font-medium">2. Process</span> — Sends unprocessed tweets to Gemini Flash for classification. Events scoring ≥6 are stored. Similar events are clustered together.</p>
-          <p><span className="text-cyan-400 font-medium">3. Summarize</span> — Takes the last 4 hours of events and generates an ecosystem intelligence report by ecosystem.</p>
-          <p><span className="text-amber-400 font-medium">4. Ideas</span> — Analyzes today's top events and generates 5 creator content opportunities with format + angle.</p>
-        </div>
-        <p className="text-xs text-muted-foreground border-t border-border pt-3">
-          All free — Nitter RSS (no API key), Gemini Flash free tier (1M tokens/day).
+      <div className="cos-divider">How the pipeline works</div>
+      <div className="cos-card" style={{ padding: "16px 20px", fontSize: 12.5, lineHeight: 1.65, color: "var(--fg-3)" }}>
+        <p style={{ marginBottom: 10 }}>
+          <span style={{ fontFamily: "var(--font-geist-mono)", color: "var(--signal-2)", letterSpacing: "0.04em", fontSize: 11 }}>1. COLLECT</span>: Hits Nitter RSS feeds for all active accounts. Filters noise (GM posts, giveaway spam). New tweets land in Supabase.
+        </p>
+        <p style={{ marginBottom: 10 }}>
+          <span style={{ fontFamily: "var(--font-geist-mono)", color: "var(--ronin)", letterSpacing: "0.04em", fontSize: 11 }}>2. PROCESS</span>: Sends unprocessed tweets to Groq (LLaMA 70B) for classification. Events scoring ≥5 are stored. Similar events clustered together.
+        </p>
+        <p style={{ marginBottom: 10 }}>
+          <span style={{ fontFamily: "var(--font-geist-mono)", color: "var(--amber)", letterSpacing: "0.04em", fontSize: 11 }}>3. SUMMARIZE</span>: Generates a 4h ecosystem briefing from top events. Tagged with overall takeaway and per-ecosystem bullets.
+        </p>
+        <p>
+          <span style={{ fontFamily: "var(--font-geist-mono)", color: "var(--violet)", letterSpacing: "0.04em", fontSize: 11 }}>4. IDEATE</span>: Creates content opportunities from top-scored events. Each idea gets a category, potential rating, and angle.
         </p>
       </div>
     </div>
   );
-}
-
-function formatResult(id: string, data: Record<string, unknown>): string {
-  if (id === "collect") return `Collected ${data.collected} tweets from ${data.accounts} accounts (${data.skipped} noise filtered)`;
-  if (id === "process") return `Processed ${data.processed} tweets → ${data.events_created} new events, ${data.clustered} clustered, ${data.below_threshold} low-signal, ${data.groq_failed} Groq failures`;
-  if (id === "summarize") return `Summary generated from ${data.event_count} events`;
-  if (id === "ideas") return `${data.ideas_created} content ideas created`;
-  return JSON.stringify(data);
-}
-
-function parseUTC(iso: string): Date {
-  const hasZone = iso.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(iso);
-  return new Date(hasZone ? iso : iso + "Z");
-}
-
-function formatTime(iso: string) {
-  const diff = Date.now() - parseUTC(iso).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 60) return `${minutes}m ago`;
-  return `${Math.floor(minutes / 60)}h ago`;
 }
