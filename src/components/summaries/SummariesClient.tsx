@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, ChevronDown, Flame } from "lucide-react";
+import { timeAgo, formatTimestamp } from "@/lib/dates";
 
 interface Summary {
   id: string;
@@ -19,31 +20,6 @@ const ECO_VAR: Record<string, string> = {
   ABSTRACT: "var(--abstract)",
 };
 
-function parseUTC(iso: string): Date {
-  const hasZone = iso.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(iso);
-  return new Date(hasZone ? iso : iso + "Z");
-}
-
-function timeAgo(iso: string) {
-  const diff = Date.now() - parseUTC(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
-
-function formatTimestamp(iso: string) {
-  return parseUTC(iso).toLocaleString([], {
-    timeZone: "UTC",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }) + " UTC";
-}
 
 function parseSections(content: string): Record<string, string> {
   try {

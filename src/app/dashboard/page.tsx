@@ -1,32 +1,10 @@
 import { supabase } from "@/lib/supabase";
 import { Radio, Zap, Lightbulb, Activity, FileText, Play } from "lucide-react";
 import Link from "next/link";
+import { formatRelativeShort, formatTimestamp } from "@/lib/dates";
+import { scoreClass } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function parseUTC(iso: string): Date {
-  const hasZone = iso.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(iso);
-  return new Date(hasZone ? iso : iso + "Z");
-}
-
-function formatRelative(iso: string) {
-  const diff = Date.now() - parseUTC(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  return `${Math.floor(h / 24)}d`;
-}
-
-function scoreClass(n: number | null) {
-  if (!n) return "low";
-  if (n >= 8) return "high";
-  if (n >= 6) return "mid";
-  return "low";
-}
 
 // Generates 6 sparkline points trending from prev→curr with subtle wave
 function trendPoints(prev: number, curr: number): number[] {
@@ -148,7 +126,7 @@ function ActivityRow({ a }: { a: { id: string; created_at: string; type: string 
       <span style={{
         fontFamily: "var(--font-geist-mono)", fontSize: 10, color: "var(--fg-5)",
         whiteSpace: "nowrap", paddingTop: 2, minWidth: 28, flexShrink: 0,
-      }}>{formatRelative(a.created_at)}</span>
+      }}>{formatRelativeShort(a.created_at)}</span>
       <span style={{ fontSize: 11.5, color: "var(--fg-2)", lineHeight: 1.45, flex: 1, minWidth: 0 }}>{a.message ?? ""}</span>
     </div>
   );
@@ -215,8 +193,7 @@ export default async function DashboardPage() {
   const summaryTimestamp = (() => {
     const s = data.summary as { created_at?: string } | null;
     if (!s?.created_at) return "";
-    const d = new Date(s.created_at.endsWith("Z") ? s.created_at : s.created_at + "Z");
-    return d.toLocaleString([], { timeZone: "UTC", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) + " UTC";
+    return formatTimestamp(s.created_at);
   })();
 
 
@@ -501,7 +478,7 @@ export default async function DashboardPage() {
               <div>
                 {data.recentEvents.map((ev) => (
                   <div key={ev.id} className="cos-event-row">
-                    <span className="cos-event-row-time">{formatRelative(ev.created_at)}</span>
+                    <span className="cos-event-row-time">{formatRelativeShort(ev.created_at)}</span>
                     <ScoreBadge n={ev.importance_score} />
                     <span className="cos-event-row-title">{ev.title ?? "Untitled"}</span>
                     <div className="cos-event-row-tags">

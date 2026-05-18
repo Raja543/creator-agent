@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, X, AlertTriangle, ArrowRight, Search, CheckSquare
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { ContentIdea, ContentFormat, PipelineStatus } from "@/lib/database.types";
+import { formatRelativeTime } from "@/lib/dates";
 
 const FORMATS: { value: ContentFormat; label: string }[] = [
   { value: "thread", label: "Thread" },
@@ -32,20 +33,6 @@ const POTENTIAL_CHIP: Record<string, { bg: string; color: string }> = {
   low:    { bg: "rgba(255,255,255,.06)", color: "var(--fg-4)" },
 };
 
-function parseUTC(iso: string): Date {
-  const hasZone = iso.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(iso);
-  return new Date(hasZone ? iso : iso + "Z");
-}
-
-function formatRelativeTime(iso: string) {
-  const diff = Date.now() - parseUTC(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "Just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
 
 type FormData = {
   title: string;

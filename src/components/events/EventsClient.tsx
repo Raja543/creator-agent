@@ -5,6 +5,8 @@ import { ExternalLink, Trash2, AlertTriangle, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { Event, Ecosystem, EventCategory } from "@/lib/database.types";
+import { formatRelativeTime, formatEventDate } from "@/lib/dates";
+import { scoreClass } from "@/lib/utils";
 
 const ECOSYSTEMS: Ecosystem[] = ["ronin", "immutable", "abstract", "other"];
 const CATEGORIES: EventCategory[] = [
@@ -37,34 +39,6 @@ const CAT_COLORS: Record<string, { color: string; bg: string }> = {
   other:       { color: "#6b7280", bg: "rgba(107,114,128,0.1)" },
 };
 
-function scoreClass(n: number | null) {
-  if (!n) return "low";
-  if (n >= 8) return "high";
-  if (n >= 6) return "mid";
-  return "low";
-}
-
-function parseUTC(iso: string): Date {
-  const hasZone = iso.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(iso);
-  return new Date(hasZone ? iso : iso + "Z");
-}
-
-function formatRelativeTime(iso: string) {
-  const diff = Date.now() - parseUTC(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "Just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
-
-function formatDate(iso: string) {
-  return parseUTC(iso).toLocaleDateString([], {
-    weekday: "short", year: "numeric", month: "short", day: "numeric",
-    hour: "2-digit", minute: "2-digit", timeZone: "UTC",
-  });
-}
 
 interface SourceTweet {
   tweet_id: string;
@@ -428,7 +402,7 @@ export function EventsClient({ initialEvents }: Props) {
                 )}
 
                 <p style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10.5, color: "var(--fg-5)" }}>
-                  {formatDate(viewTarget.created_at)}
+                  {formatEventDate(viewTarget.created_at)}
                 </p>
               </div>
             </div>

@@ -1,18 +1,14 @@
 import { supabase } from "@/lib/supabase";
 import { classifyTweet } from "@/lib/gemini";
-import { isCronAuthorized } from "@/lib/cron-auth";
+import { guardCron } from "@/lib/cron-auth";
+import { logActivity } from "@/lib/queries";
 
 export const maxDuration = 300;
 
 const IMPORTANCE_THRESHOLD = 5;
 const BATCH_SIZE = 25;
 
-export function GET(request: Request) {
-  if (!isCronAuthorized(request)) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return POST();
-}
+export function GET(request: Request) { return guardCron(request, POST); }
 
 async function classifyWithRetry(content: string, context?: { ecosystem?: string; category?: string }) {
   const result = await classifyTweet(content, context);
@@ -91,11 +87,10 @@ export async function POST() {
         })
         .eq("id", clusterTarget.id);
 
-      await supabase.from("activities").insert({
-        type: "event_clustered",
-        message: `Tweet from @${tweet.username} clustered into: "${clusterTarget.title}"`,
-        metadata: { event_id: clusterTarget.id, tweet_id: tweet.tweet_id },
-      });
+      await logActivity("event_clustered",
+        `Tweet from @${tweet.username} clustered into: "${clusterTarget.title}"`,
+        { event_id: clusterTarget.id, tweet_id: tweet.tweet_id },
+      );
       clustered++;
     } else {
       const { data: newEvent } = await supabase
@@ -116,11 +111,10 @@ export async function POST() {
 
       if (newEvent) {
         eventsCreated++;
-        await supabase.from("activities").insert({
-          type: "event_detected",
-          message: `New event [${eventEcosystem} | ${classification.category} | score ${classification.importance_score}]: ${classification.summary}`,
-          metadata: { event_id: newEvent.id, score: classification.importance_score, ecosystem: eventEcosystem },
-        });
+        await logActivity("event_detected",
+          `New event [${eventEcosystem} | ${classification.category} | score ${classification.importance_score}]: ${classification.summary}`,
+          { event_id: newEvent.id, score: classification.importance_score, ecosystem: eventEcosystem },
+        );
       }
     }
 

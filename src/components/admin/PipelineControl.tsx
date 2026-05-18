@@ -5,6 +5,7 @@ import {
   Radio, Cpu, FileText, Lightbulb, Play,
   CheckCircle2, XCircle, Loader2, Zap, Database,
 } from "lucide-react";
+import { parseUTC } from "@/lib/dates";
 
 interface Stats {
   totalTweets: number;
@@ -44,11 +45,6 @@ const TONE_BORDER: Record<string, string> = {
   summary: "rgba(6,182,212,0.35)",
   ideate:  "rgba(245,158,11,0.35)",
 };
-
-function parseUTC(iso: string): Date {
-  const hasZone = iso.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(iso);
-  return new Date(hasZone ? iso : iso + "Z");
-}
 
 function timeAgo(iso: string) {
   const diff = Date.now() - parseUTC(iso).getTime();

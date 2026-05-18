@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { Clock, Trash2, Inbox, ChevronRight, ChevronLeft, X, Pencil } from "lucide-react";
 import type { ContentIdea, PipelineStatus } from "@/lib/database.types";
+import { timeAgo } from "@/lib/dates";
 
 interface Stage {
   id: PipelineStatus;
@@ -40,20 +41,6 @@ const POTENTIAL_CLS: Record<string, string> = {
   low:    "",
 };
 
-function parseUTC(iso: string): Date {
-  const hasZone = iso.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(iso);
-  return new Date(hasZone ? iso : iso + "Z");
-}
-
-function formatRelative(isoString: string) {
-  const diff = Date.now() - parseUTC(isoString).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
 
 export function PipelineClient({ stages, initialGrouped }: Props) {
   const [mounted, setMounted] = useState(false);
@@ -209,7 +196,7 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
                   <div className="cos-kanban-card-meta">
                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <Clock style={{ width: 10, height: 10 }} />
-                      {formatRelative(card.created_at)}
+                      {timeAgo(card.created_at)}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       {prevStage && (
@@ -303,7 +290,7 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
                               <div className="cos-kanban-card-meta">
                                 <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
                                   <Clock style={{ width: 9, height: 9 }} />
-                                  {formatRelative(card.created_at)}
+                                  {timeAgo(card.created_at)}
                                 </div>
                                 <div className="cos-row-actions">
                                   <button
@@ -416,7 +403,7 @@ export function PipelineClient({ stages, initialGrouped }: Props) {
               <div style={{ display: "flex", gap: 16, fontFamily: "var(--font-geist-mono)", fontSize: 10.5, color: "var(--fg-4)", flexWrap: "wrap" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <Clock style={{ width: 11, height: 11 }} />
-                  {formatRelative(viewTarget.created_at)}
+                  {timeAgo(viewTarget.created_at)}
                 </span>
                 <span>Priority {viewTarget.priority}/10</span>
               </div>

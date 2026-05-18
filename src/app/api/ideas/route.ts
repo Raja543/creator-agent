@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabase";
+import { logActivity } from "@/lib/queries";
+import { errResponse } from "@/lib/utils";
 import type { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -17,7 +19,7 @@ export async function GET(request: NextRequest) {
   if (potential) query = query.eq("potential", potential);
 
   const { data, error } = await query;
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) return errResponse(error);
   return Response.json(data);
 }
 
@@ -40,13 +42,12 @@ export async function POST(request: NextRequest) {
     .select()
     .single();
 
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) return errResponse(error);
 
-  await supabase.from("activities").insert({
-    type: "idea_generated",
-    message: `New content idea: "${body.title}"`,
-    metadata: { idea_id: data.id, format: body.format },
-  });
+  await logActivity("idea_generated",
+    `New content idea: "${body.title}"`,
+    { idea_id: data.id, format: body.format },
+  );
 
   return Response.json(data, { status: 201 });
 }

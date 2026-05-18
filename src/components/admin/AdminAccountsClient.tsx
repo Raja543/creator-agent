@@ -6,13 +6,7 @@ import {
   Users, ExternalLink, ChevronDown,
 } from "lucide-react";
 import type { Account, AccountInsert, Ecosystem, AccountCategory } from "@/lib/database.types";
-
-const ECOSYSTEMS: { value: Ecosystem; label: string }[] = [
-  { value: "ronin",     label: "Ronin" },
-  { value: "immutable", label: "Immutable" },
-  { value: "abstract",  label: "Abstract" },
-  { value: "other",     label: "Other" },
-];
+import { ACCOUNT_ECOSYSTEMS } from "@/lib/constants";
 
 const CATEGORIES: { value: AccountCategory; label: string; icon: string }[] = [
   { value: "official_game", label: "Official Game", icon: "🎮" },
@@ -263,7 +257,7 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
     setLoading(false);
   }
 
-  const ecoConfig = Object.fromEntries(ECOSYSTEMS.map((e) => [e.value, e]));
+  const ecoConfig = Object.fromEntries(ACCOUNT_ECOSYSTEMS.map((e) => [e.value, e]));
   const catConfig = Object.fromEntries(CATEGORIES.map((c) => [c.value, c]));
 
   return (
@@ -285,7 +279,7 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
             onChange={setFilterEco}
             options={[
               { value: "all", label: "All Ecosystems" },
-              ...ECOSYSTEMS.map((e) => ({ value: e.value, label: e.label })),
+              ...ACCOUNT_ECOSYSTEMS.map((e) => ({ value: e.value, label: e.label })),
             ]}
           />
           <SelectFilter
@@ -443,7 +437,7 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
                   className="cos-input"
                 >
                   <option value="">Select ecosystem...</option>
-                  {ECOSYSTEMS.map((e) => (
+                  {ACCOUNT_ECOSYSTEMS.map((e) => (
                     <option key={e.value} value={e.value}>{e.label}</option>
                   ))}
                 </select>

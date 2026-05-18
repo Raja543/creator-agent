@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabase";
+import { logActivity } from "@/lib/queries";
+import { errResponse } from "@/lib/utils";
 import type { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -17,7 +19,7 @@ export async function GET(request: NextRequest) {
   if (category) query = query.eq("category", category);
 
   const { data, error } = await query;
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) return errResponse(error);
   return Response.json(data);
 }
 
@@ -38,13 +40,12 @@ export async function POST(request: NextRequest) {
     .select()
     .single();
 
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) return errResponse(error);
 
-  await supabase.from("activities").insert({
-    type: "event_detected",
-    message: `New event detected: ${body.title}`,
-    metadata: { event_id: data.id, ecosystem: body.ecosystem },
-  });
+  await logActivity("event_detected",
+    `New event detected: ${body.title}`,
+    { event_id: data.id, ecosystem: body.ecosystem },
+  );
 
   return Response.json(data, { status: 201 });
 }

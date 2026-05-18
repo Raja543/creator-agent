@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabase";
+import { logActivity } from "@/lib/queries";
+import { errResponse } from "@/lib/utils";
 import type { NextRequest } from "next/server";
 
 export async function PUT(
@@ -15,13 +17,12 @@ export async function PUT(
     .select()
     .single();
 
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) return errResponse(error);
 
-  await supabase.from("activities").insert({
-    type: "source_updated",
-    message: `Updated source @${data.username}`,
-    metadata: { id, username: data.username },
-  });
+  await logActivity("source_updated",
+    `Updated source @${data.username}`,
+    { id, username: data.username },
+  );
 
   return Response.json(data);
 }
@@ -35,14 +36,13 @@ export async function DELETE(
   const { data: account } = await supabase.from("accounts").select("username").eq("id", id).single();
 
   const { error } = await supabase.from("accounts").delete().eq("id", id);
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) return errResponse(error);
 
   if (account) {
-    await supabase.from("activities").insert({
-      type: "source_updated",
-      message: `Removed source @${account.username}`,
-      metadata: { id },
-    });
+    await logActivity("source_updated",
+      `Removed source @${account.username}`,
+      { id },
+    );
   }
 
   return Response.json({ success: true });

@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabase";
+import { logActivity } from "@/lib/queries";
+import { errResponse } from "@/lib/utils";
 import type { NextRequest } from "next/server";
 
 export async function PUT(
@@ -15,14 +17,13 @@ export async function PUT(
     .select()
     .single();
 
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) return errResponse(error);
 
   if (body.status) {
-    await supabase.from("activities").insert({
-      type: "pipeline_moved",
-      message: `Content idea moved to "${body.status}": ${data.title}`,
-      metadata: { idea_id: id, status: body.status },
-    });
+    await logActivity("pipeline_moved",
+      `Content idea moved to "${body.status}": ${data.title}`,
+      { idea_id: id, status: body.status },
+    );
   }
 
   return Response.json(data);
@@ -34,6 +35,6 @@ export async function DELETE(
 ) {
   const { id } = await params;
   const { error } = await supabase.from("content_ideas").delete().eq("id", id);
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) return errResponse(error);
   return Response.json({ success: true });
 }

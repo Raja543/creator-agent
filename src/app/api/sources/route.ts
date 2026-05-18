@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabase";
+import { logActivity } from "@/lib/queries";
+import { errResponse } from "@/lib/utils";
 import type { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -15,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await query;
 
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) return errResponse(error);
   return Response.json(data);
 }
 
@@ -38,14 +40,12 @@ export async function POST(request: NextRequest) {
     .select()
     .single();
 
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) return errResponse(error);
 
-  // Log activity
-  await supabase.from("activities").insert({
-    type: "source_added",
-    message: `Added source @${body.username} (${body.ecosystem ?? "unset"} · ${body.category ?? "unset"})`,
-    metadata: { username: body.username },
-  });
+  await logActivity("source_added",
+    `Added source @${body.username} (${body.ecosystem ?? "unset"} · ${body.category ?? "unset"})`,
+    { username: body.username },
+  );
 
   return Response.json(data, { status: 201 });
 }

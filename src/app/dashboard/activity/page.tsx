@@ -1,34 +1,13 @@
 import { supabase } from "@/lib/supabase";
 import type { ActivityType } from "@/lib/database.types";
+import { formatTime, formatActivityDate } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
-
-function parseUTC(iso: string): Date {
-  const hasZone = iso.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(iso);
-  return new Date(hasZone ? iso : iso + "Z");
-}
-
-function formatTime(iso: string) {
-  const date = parseUTC(iso);
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
-}
-
-function formatDate(iso: string) {
-  const date = parseUTC(iso);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const sameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-  if (sameDay(date, today)) return "Today";
-  if (sameDay(date, yesterday)) return "Yesterday";
-  return date.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
-}
 
 function groupByDate(items: { id: string; type: ActivityType | null; message: string | null; created_at: string }[]) {
   const groups: Map<string, typeof items> = new Map();
   for (const item of items) {
-    const key = formatDate(item.created_at);
+    const key = formatActivityDate(item.created_at);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(item);
   }

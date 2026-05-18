@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { errResponse } from "@/lib/utils";
 import type { NextRequest } from "next/server";
 
 export async function PUT(
@@ -22,7 +23,7 @@ export async function PUT(
     .select()
     .single();
 
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) return errResponse(error);
   return Response.json(data);
 }
 
@@ -31,9 +32,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-
   const { error } = await supabase.from("events").delete().eq("id", id);
-  if (error) return Response.json({ error: error.message }, { status: 500 });
-
+  if (error) return errResponse(error);
   return new Response(null, { status: 204 });
 }

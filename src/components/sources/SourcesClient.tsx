@@ -4,32 +4,11 @@ import { useState, useMemo } from "react";
 import { Plus, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import type { Account, Ecosystem, AccountCategory } from "@/lib/database.types";
+import type { Account } from "@/lib/database.types";
+import { ECO_BADGE } from "@/lib/ecosystem-colors";
+import { ACCOUNT_ECOSYSTEMS, ACCOUNT_CATEGORIES } from "@/lib/constants";
 
-const ECOSYSTEMS: { value: Ecosystem; label: string }[] = [
-  { value: "ronin", label: "Ronin" },
-  { value: "immutable", label: "Immutable" },
-  { value: "abstract", label: "Abstract" },
-  { value: "other", label: "Other" },
-];
 
-const CATEGORIES: { value: AccountCategory; label: string }[] = [
-  { value: "official_game", label: "Official Game" },
-  { value: "ecosystem", label: "Ecosystem" },
-  { value: "founder", label: "Founder" },
-  { value: "creator", label: "Creator" },
-  { value: "analytics", label: "Analytics" },
-  { value: "media", label: "Media" },
-  { value: "guild", label: "Guild" },
-  { value: "influencer", label: "Influencer" },
-];
-
-const ECOSYSTEM_COLORS: Record<string, string> = {
-  ronin: "bg-sky-400/15 text-sky-400",
-  immutable: "bg-purple-400/15 text-purple-400",
-  abstract: "bg-emerald-400/15 text-emerald-400",
-  other: "bg-muted text-muted-foreground",
-};
 
 const CATEGORY_COLORS: Record<string, string> = {
   official_game: "bg-green-400/15 text-green-400",
@@ -153,7 +132,7 @@ function SourceForm({ initial, onSubmit, onCancel, submitting, submitLabel }: So
             className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
           >
             <option value="">None</option>
-            {ECOSYSTEMS.map((e) => (
+            {ACCOUNT_ECOSYSTEMS.map((e) => (
               <option key={e.value} value={e.value}>{e.label}</option>
             ))}
           </select>
@@ -167,7 +146,7 @@ function SourceForm({ initial, onSubmit, onCancel, submitting, submitLabel }: So
             className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
           >
             <option value="">None</option>
-            {CATEGORIES.map((c) => (
+            {ACCOUNT_CATEGORIES.map((c) => (
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>
@@ -362,7 +341,7 @@ export function SourcesClient({ initialSources }: Props) {
 
                 <div className="flex items-center gap-2 flex-wrap">
                   {source.ecosystem && (
-                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${ECOSYSTEM_COLORS[source.ecosystem] ?? ECOSYSTEM_COLORS.other}`}>
+                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${ECO_BADGE[source.ecosystem] ?? ECO_BADGE.other}`}>
                       {source.ecosystem}
                     </span>
                   )}
@@ -420,7 +399,7 @@ export function SourcesClient({ initialSources }: Props) {
                     </td>
                     <td className="px-4 py-3">
                       {source.ecosystem ? (
-                        <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${ECOSYSTEM_COLORS[source.ecosystem] ?? ECOSYSTEM_COLORS.other}`}>
+                        <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${ECO_BADGE[source.ecosystem] ?? ECO_BADGE.other}`}>
                           {source.ecosystem}
                         </span>
                       ) : <span className="text-muted-foreground/40 text-xs">—</span>}

@@ -1,6 +1,4 @@
-function Bone({ className }: { className?: string }) {
-  return <div className={`animate-pulse bg-muted/60 rounded ${className}`} />;
-}
+import { Bone } from "@/components/ui/bone";
 
 export default function IdeasLoading() {
   return (

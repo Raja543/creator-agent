@@ -1,38 +1,14 @@
 import { supabase } from "@/lib/supabase";
 import { generateContentIdeas } from "@/lib/gemini";
-import { isCronAuthorized } from "@/lib/cron-auth";
+import { guardCron } from "@/lib/cron-auth";
+import { fetchTopEvents, logActivity } from "@/lib/queries";
 
-export function GET(request: Request) {
-  if (!isCronAuthorized(request)) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return POST();
-}
+export function GET(request: Request) { return guardCron(request, POST); }
 
 export async function POST() {
-  // Use top events from last 24 hours
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const events = await fetchTopEvents();
 
-  let { data: events } = await supabase
-    .from("events")
-    .select("title, summary, ecosystem, category, importance_score, keywords")
-    .gte("created_at", since)
-    .gte("importance_score", 5)
-    .order("importance_score", { ascending: false })
-    .limit(50);
-
-  // Fallback: use most recent 50 events regardless of age
-  if (!events?.length) {
-    const { data: fallback } = await supabase
-      .from("events")
-      .select("title, summary, ecosystem, category, importance_score, keywords")
-      .gte("importance_score", 5)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    events = fallback;
-  }
-
-  if (!events?.length) {
+  if (!events.length) {
     return Response.json({ message: "No events found to generate ideas from" });
   }
 
@@ -61,11 +37,10 @@ export async function POST() {
     if (data) created.push(data);
   }
 
-  await supabase.from("activities").insert({
-    type: "idea_generated",
-    message: `Generated ${created.length} content ideas from ${events.length} ecosystem events`,
-    metadata: { ideas_created: created.length, event_count: events.length },
-  });
+  await logActivity("idea_generated",
+    `Generated ${created.length} content ideas from ${events.length} ecosystem events`,
+    { ideas_created: created.length, event_count: events.length },
+  );
 
   return Response.json({ ideas_created: created.length, ideas: created });
 }

@@ -8,3 +8,13 @@ export function isCronAuthorized(request: Request): boolean {
   if (request.headers.get("x-cron-secret") === secret) return true;
   return false;
 }
+
+export function guardCron(
+  request: Request,
+  handler: () => Response | Promise<Response>,
+): Response | Promise<Response> {
+  if (!isCronAuthorized(request)) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return handler();
+}
