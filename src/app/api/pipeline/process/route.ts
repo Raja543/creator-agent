@@ -8,6 +8,18 @@ export const maxDuration = 300;
 const IMPORTANCE_THRESHOLD = 5;
 const BATCH_SIZE = 25;
 
+function tokenize(s: string): string[] {
+  return s.toLowerCase().replace(/[^a-z0-9 ]/g, "").split(/\s+/).filter(w => w.length > 2);
+}
+
+function titleSimilarity(a: string, b: string): number {
+  const wa = new Set(tokenize(a));
+  const wb = tokenize(b);
+  if (!wa.size || !wb.length) return 0;
+  const overlap = wb.filter(w => wa.has(w)).length;
+  return overlap / Math.max(wa.size, wb.length);
+}
+
 export function GET(request: Request) { return guardCron(request, POST); }
 
 async function classifyWithRetry(content: string, context?: { ecosystem?: string; category?: string }) {
@@ -65,14 +77,15 @@ export async function POST() {
       .select("id, title, source_tweets, keywords")
       .eq("ecosystem", eventEcosystem)
       .eq("category", classification.category)
-      .gte("created_at", new Date(Date.now() - 86400000).toISOString())
+      .gte("created_at", new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
       .order("created_at", { ascending: false })
-      .limit(5);
+      .limit(10);
 
     const clusterTarget = existingEvents?.find((e) => {
       const existingKeywords: string[] = (e.keywords as string[]) ?? [];
-      const overlap = classification.keywords.filter((k) => existingKeywords.includes(k));
-      return overlap.length >= 2;
+      const keywordOverlap = classification.keywords.filter((k) => existingKeywords.includes(k)).length;
+      const titleMatch = titleSimilarity(classification.summary, e.title as string) >= 0.5;
+      return keywordOverlap >= 3 || titleMatch;
     });
 
     if (clusterTarget) {

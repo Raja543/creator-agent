@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Users, Radio, Zap, Lightbulb, Database, FileText, Play, ArrowRight } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 async function getAdminStats() {
   const [accounts, activeAccounts, events, ideas, tweets, byEco] = await Promise.all([

@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import type { ActivityType } from "@/lib/database.types";
 import { formatTime, formatActivityDate } from "@/lib/dates";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 function groupByDate(items: { id: string; type: ActivityType | null; message: string | null; created_at: string }[]) {
   const groups: Map<string, typeof items> = new Map();

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Radio, Cpu, FileText, Lightbulb, Play,
-  CheckCircle2, XCircle, Loader2, Zap, Database,
+  CheckCircle2, XCircle, Loader2, Zap, Database, Trash2,
 } from "lucide-react";
 import { parseUTC } from "@/lib/dates";
 
@@ -54,10 +54,11 @@ function timeAgo(iso: string) {
 }
 
 function formatResult(id: string, data: Record<string, unknown>): string {
-  if (id === "collect")   return `Collected ${data.collected ?? 0} tweets from ${data.accounts ?? 0} accounts (${data.skipped ?? 0} filtered)`;
-  if (id === "process")   return `${data.processed ?? 0} processed → ${data.events_created ?? 0} events, ${data.clustered ?? 0} clustered, ${data.groq_failed ?? 0} AI failures`;
-  if (id === "summarize") return `Summary generated from ${data.event_count ?? 0} events`;
-  if (id === "ideas")     return `${data.ideas_created ?? 0} content ideas created`;
+  if (id === "collect")     return `Collected ${data.collected ?? 0} tweets from ${data.accounts ?? 0} accounts (${data.skipped ?? 0} filtered)`;
+  if (id === "process")     return `${data.processed ?? 0} processed → ${data.events_created ?? 0} events, ${data.clustered ?? 0} clustered, ${data.groq_failed ?? 0} AI failures`;
+  if (id === "summarize")   return `Summary generated from ${data.event_count ?? 0} events`;
+  if (id === "ideas")       return `${data.ideas_created ?? 0} ideas created, ${data.skipped ?? 0} duplicates skipped`;
+  if (id === "deduplicate") return `Removed ${data.events_deleted ?? 0} duplicate events and ${data.ideas_deleted ?? 0} duplicate ideas`;
   return JSON.stringify(data);
 }
 
@@ -254,6 +255,45 @@ export function PipelineControl({ stats: initialStats }: { stats: Stats }) {
             </div>
           );
         })}
+      </div>
+
+      {/* Deduplicate */}
+      <div className="cos-divider">Maintenance</div>
+      <div
+        className="cos-card"
+        style={{ padding: 18, borderColor: "rgba(239,68,68,0.2)" }}
+      >
+        <div className="flex items-center gap-4">
+          <div style={{ width: 44, height: 44, borderRadius: 8, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#ef4444", display: "grid", placeItems: "center", flexShrink: 0 }}>
+            <Trash2 style={{ width: 17, height: 17 }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)", marginBottom: 2 }}>Deduplicate database</div>
+            <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, color: "var(--fg-4)" }}>
+              Find and delete similar events &amp; ideas (≥55% title match)
+            </div>
+            {results["deduplicate"] && results["deduplicate"].status !== "running" && (
+              <div className="flex items-center gap-1.5 mt-2" style={{ fontSize: 11.5, color: results["deduplicate"].status === "done" ? "var(--signal)" : "var(--rose)" }}>
+                {results["deduplicate"].status === "done"
+                  ? <CheckCircle2 style={{ width: 12, height: 12, flexShrink: 0 }} />
+                  : <XCircle style={{ width: 12, height: 12, flexShrink: 0 }} />}
+                {results["deduplicate"].message}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => runStep("/api/pipeline/deduplicate", "deduplicate")}
+            disabled={isAnyRunning}
+            className="cos-btn-ghost"
+            style={{ fontSize: 10.5, borderColor: "rgba(239,68,68,0.3)", color: "#ef4444" }}
+          >
+            {results["deduplicate"]?.status === "running" ? (
+              <><Loader2 style={{ width: 11, height: 11 }} className="animate-spin" /> Running</>
+            ) : (
+              <><Trash2 style={{ width: 11, height: 11 }} /> Run</>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* How it works */}

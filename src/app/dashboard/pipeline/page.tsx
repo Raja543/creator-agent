@@ -10,7 +10,7 @@ const STAGES: { id: PipelineStatus; label: string; color: string }[] = [
   { id: "published", label: "Published", color: "text-green-400" },
 ];
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 export default async function PipelinePage() {
   const { data: ideas } = await supabase

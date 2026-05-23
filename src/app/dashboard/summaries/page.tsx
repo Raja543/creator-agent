@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { SummariesClient } from "@/components/summaries/SummariesClient";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 120;
 
 export default async function SummariesPage() {
   const { data: summaries } = await supabase

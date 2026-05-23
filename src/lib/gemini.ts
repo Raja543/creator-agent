@@ -157,12 +157,11 @@ Content types to consider:
 - "You should know about X" educational threads
 - Community spotlights / player reward breakdowns
 - Contrarian takes backed by event data
-
-Events:
 `;
 
 export async function generateContentIdeas(
-  events: Array<{ title: string; summary: string; ecosystem: string; category: string; importance_score?: number; keywords?: string[] | null }>
+  events: Array<{ title: string; summary: string; ecosystem: string; category: string; importance_score?: number; keywords?: string[] | null }>,
+  existingTitles?: string[],
 ): Promise<ContentIdeas | null> {
   try {
     const eventsText = events
@@ -172,7 +171,12 @@ export async function generateContentIdeas(
         return `[${e.ecosystem.toUpperCase()} | ${e.category}${score}] ${e.title}: ${e.summary}${kw}`;
       })
       .join("\n");
-    const data = await jsonChat(IDEAS_PROMPT + eventsText);
+
+    const alreadyCovered = existingTitles?.length
+      ? `\nAlready covered in the last 48h — do NOT generate ideas similar to these:\n${existingTitles.map(t => `- ${t}`).join("\n")}\n`
+      : "";
+
+    const data = await jsonChat(IDEAS_PROMPT + alreadyCovered + "\nEvents:\n" + eventsText);
     return data as ContentIdeas;
   } catch {
     return null;

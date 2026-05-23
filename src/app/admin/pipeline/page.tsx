@@ -1,7 +1,7 @@
 import { PipelineControl } from "@/components/admin/PipelineControl";
 import { supabase } from "@/lib/supabase";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 export default async function AdminPipelinePage() {
   const [tweets, events, ideas, lastSummary] = await Promise.all([

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { formatRelativeShort, formatTimestamp } from "@/lib/dates";
 import { scoreClass } from "@/lib/utils";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 // Generates 6 sparkline points trending from prev→curr with subtle wave
 function trendPoints(prev: number, curr: number): number[] {
