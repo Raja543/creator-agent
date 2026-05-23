@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { isCronAuthorized } from "@/lib/cron-auth";
+import { guardCron } from "@/lib/cron-auth";
 
 function tokenize(s: string): string[] {
   return s.toLowerCase().replace(/[^a-z0-9 ]/g, "").split(/\s+/).filter(w => w.length > 2);
@@ -37,11 +37,7 @@ function findDuplicates<T extends { id: string; title: string }>(
   return [...toDelete];
 }
 
-export async function POST(request: Request) {
-  if (!isCronAuthorized(request)) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function POST() {
   // --- Deduplicate events ---
   const { data: events } = await supabase
     .from("events")
@@ -95,7 +91,6 @@ export async function POST(request: Request) {
   });
 }
 
-// Allow manual trigger via GET with cron auth
 export function GET(request: Request) {
-  return POST(request);
+  return guardCron(request, POST);
 }
