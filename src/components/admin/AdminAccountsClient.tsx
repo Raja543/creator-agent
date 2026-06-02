@@ -491,7 +491,7 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
                 onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
                 style={{ width: 14, height: 14 }}
               />
-              <span style={{ fontSize: 12.5, color: "var(--fg-2)" }}>Active — include in scraping pipeline</span>
+              <span style={{ fontSize: 12.5, color: "var(--fg-2)" }}>Active: include in scraping pipeline</span>
             </label>
             {error && (
               <div style={{ fontSize: 12, color: "var(--rose)", background: "var(--rose-dim)", padding: "8px 12px", borderRadius: 6 }}>
@@ -733,14 +733,14 @@ function AccountTable({
                   {account.ecosystem ? (
                     <span className={`cos-eco ${account.ecosystem}`}>{ecoConfig[account.ecosystem]?.label}</span>
                   ) : (
-                    <span style={{ color: "var(--fg-5)" }}>—</span>
+                    <span style={{ color: "var(--fg-5)" }}>-</span>
                   )}
                 </td>
                 <td>
                   {account.category ? (
                     <span className={`cos-chip ${CATEGORY_CHIP[account.category] ?? ""}`}>{catConfig[account.category]?.label}</span>
                   ) : (
-                    <span style={{ color: "var(--fg-5)" }}>—</span>
+                    <span style={{ color: "var(--fg-5)" }}>-</span>
                   )}
                 </td>
                 <td>

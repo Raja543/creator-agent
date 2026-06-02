@@ -107,7 +107,7 @@ function EcoChip({ eco }: { eco: string }) {
 }
 
 function ScoreBadge({ n }: { n: number | null }) {
-  return <span className={`cos-score ${scoreClass(n)}`}>{n ?? "—"}</span>;
+  return <span className={`cos-score ${scoreClass(n)}`}>{n ?? "-"}</span>;
 }
 
 function Delta({ v }: { v: number }) {
@@ -328,7 +328,7 @@ export default async function DashboardPage() {
                 Today&apos;s Focus
               </span>
               <span style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10, color: "var(--fg-5)", marginLeft: 4 }}>
-                — where to start
+                · where to start
               </span>
             </div>
             <div style={{ display: "flex", flexDirection: "column" as const }}>
@@ -407,7 +407,7 @@ export default async function DashboardPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: p.color, marginBottom: 2 }}>Most active ecosystem</div>
                       <div style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>
-                        {topEco[0].charAt(0).toUpperCase() + topEco[0].slice(1)} — {topEco[1]} signal{topEco[1] !== 1 ? "s" : ""} in the last 24h
+                        {topEco[0].charAt(0).toUpperCase() + topEco[0].slice(1)}: {topEco[1]} signal{topEco[1] !== 1 ? "s" : ""} in the last 24h
                       </div>
                     </div>
                     <span style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10, color: "var(--fg-5)", flexShrink: 0 }}>→</span>
@@ -593,7 +593,7 @@ export default async function DashboardPage() {
             </div>
             {data.recentEvents.length === 0 ? (
               <div style={{ padding: "28px 16px", textAlign: "center" }}>
-                <p style={{ fontSize: 11.5, color: "var(--fg-4)", fontFamily: "var(--font-geist-mono)" }}>No events yet — run the pipeline.</p>
+                <p style={{ fontSize: 11.5, color: "var(--fg-4)", fontFamily: "var(--font-geist-mono)" }}>No events yet. Run the pipeline.</p>
               </div>
             ) : (
               <div>
@@ -673,7 +673,7 @@ export default async function DashboardPage() {
               <Radio className="size-4" />
             </div>
             <div className="flex-1">
-              <p className="font-medium text-foreground text-sm">Get started — add your first sources</p>
+              <p className="font-medium text-foreground text-sm">Get started: add your first sources</p>
               <p className="text-xs mt-0.5" style={{ color: "var(--fg-3)" }}>
                 Add X accounts to track, or use Admin → Manage Accounts to bulk-add by ecosystem.
               </p>

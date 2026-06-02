@@ -206,7 +206,7 @@ export function EventsClient({ initialEvents }: Props) {
                   })()}
                 </div>
                 <span className={`cos-score ${scoreClass(event.importance_score)}`}>
-                  {event.importance_score ?? "—"}
+                  {event.importance_score ?? "-"}
                 </span>
               </div>
 

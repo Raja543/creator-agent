@@ -16,7 +16,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Creator OS — Web3 Gaming Intelligence",
+  title: "Creator OS · Web3 Gaming Intelligence",
   description: "AI-powered creator operating system for Web3 gaming",
 };
 

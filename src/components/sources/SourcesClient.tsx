@@ -402,14 +402,14 @@ export function SourcesClient({ initialSources }: Props) {
                         <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${ECO_BADGE[source.ecosystem] ?? ECO_BADGE.other}`}>
                           {source.ecosystem}
                         </span>
-                      ) : <span className="text-muted-foreground/40 text-xs">—</span>}
+                      ) : <span className="text-muted-foreground/40 text-xs">-</span>}
                     </td>
                     <td className="px-4 py-3">
                       {source.category ? (
                         <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${CATEGORY_COLORS[source.category] ?? "bg-muted text-muted-foreground"}`}>
                           {source.category.replace("_", " ")}
                         </span>
-                      ) : <span className="text-muted-foreground/40 text-xs">—</span>}
+                      ) : <span className="text-muted-foreground/40 text-xs">-</span>}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">

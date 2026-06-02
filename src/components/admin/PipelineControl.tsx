@@ -59,6 +59,7 @@ function formatResult(id: string, data: Record<string, unknown>): string {
   if (id === "summarize")   return `Summary generated from ${data.event_count ?? 0} events`;
   if (id === "ideas")       return `${data.ideas_created ?? 0} ideas created, ${data.skipped ?? 0} duplicates skipped`;
   if (id === "deduplicate") return `Removed ${data.events_deleted ?? 0} duplicate events and ${data.ideas_deleted ?? 0} duplicate ideas`;
+  if (id === "cleanup")     return `Removed ${data.events_deleted ?? 0} events and ${data.ideas_deleted ?? 0} stale ideas older than 7 days`;
   return JSON.stringify(data);
 }
 
@@ -288,6 +289,44 @@ export function PipelineControl({ stats: initialStats }: { stats: Stats }) {
             style={{ fontSize: 10.5, borderColor: "rgba(239,68,68,0.3)", color: "#ef4444" }}
           >
             {results["deduplicate"]?.status === "running" ? (
+              <><Loader2 style={{ width: 11, height: 11 }} className="animate-spin" /> Running</>
+            ) : (
+              <><Trash2 style={{ width: 11, height: 11 }} /> Run</>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Cleanup old data */}
+      <div
+        className="cos-card"
+        style={{ padding: 18, borderColor: "rgba(239,68,68,0.2)" }}
+      >
+        <div className="flex items-center gap-4">
+          <div style={{ width: 44, height: 44, borderRadius: 8, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#ef4444", display: "grid", placeItems: "center", flexShrink: 0 }}>
+            <Trash2 style={{ width: 17, height: 17 }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)", marginBottom: 2 }}>Delete old data</div>
+            <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, color: "var(--fg-4)" }}>
+              Remove events and stale ideas older than 7 days (runs automatically at 3AM UTC)
+            </div>
+            {results["cleanup"] && results["cleanup"].status !== "running" && (
+              <div className="flex items-center gap-1.5 mt-2" style={{ fontSize: 11.5, color: results["cleanup"].status === "done" ? "var(--signal)" : "var(--rose)" }}>
+                {results["cleanup"].status === "done"
+                  ? <CheckCircle2 style={{ width: 12, height: 12, flexShrink: 0 }} />
+                  : <XCircle style={{ width: 12, height: 12, flexShrink: 0 }} />}
+                {results["cleanup"].message}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => runStep("/api/pipeline/cleanup", "cleanup")}
+            disabled={isAnyRunning}
+            className="cos-btn-ghost"
+            style={{ fontSize: 10.5, borderColor: "rgba(239,68,68,0.3)", color: "#ef4444" }}
+          >
+            {results["cleanup"]?.status === "running" ? (
               <><Loader2 style={{ width: 11, height: 11 }} className="animate-spin" /> Running</>
             ) : (
               <><Trash2 style={{ width: 11, height: 11 }} /> Run</>

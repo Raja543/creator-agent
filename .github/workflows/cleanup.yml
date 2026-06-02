@@ -1,0 +1,23 @@
+name: Daily cleanup
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # 3:00 AM UTC every day
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete events and stale ideas older than 7 days
+        run: |
+          curl -s -o response.json -w "%{http_code}" \
+            -X GET "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/pipeline/cleanup" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" | tee status_code
+          echo ""
+          cat response.json
+          STATUS=$(cat status_code)
+          if [ "$STATUS" != "200" ]; then
+            echo "Cleanup failed with status $STATUS"
+            exit 1
+          fi
