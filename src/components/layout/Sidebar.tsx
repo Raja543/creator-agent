@@ -124,7 +124,19 @@ function SidebarContent({ onClose, collapsed, onToggleCollapse, isAdmin }: { onC
                 <Zap className="size-4 text-primary-foreground" />
               </div>
               <div>
-                <p className="text-sm font-bold text-sidebar-foreground leading-none">Creator OS</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-bold text-sidebar-foreground leading-none">Creator OS</p>
+                  {process.env.NEXT_PUBLIC_APP_ENV === "beta" && (
+                    <span style={{
+                      fontFamily: "var(--font-geist-mono)", fontSize: 8.5, fontWeight: 700,
+                      letterSpacing: "0.08em", color: "var(--signal)",
+                      background: "var(--signal-dim)", border: "1px solid rgba(74,222,128,0.25)",
+                      borderRadius: 4, padding: "1px 5px", lineHeight: 1.4,
+                    }}>
+                      BETA
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground mt-0.5">Web3 Intel</p>
               </div>
             </div>
