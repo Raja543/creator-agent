@@ -1,10 +1,9 @@
 import { supabaseService } from "@/lib/supabase-service";
-import { getRequestUserId } from "@/lib/auth-headers";
+import { getRequestUserId, getRequestIsAdmin } from "@/lib/auth-headers";
 import { nanoid } from "nanoid";
 
 export async function GET() {
-  const userId = await getRequestUserId();
-  if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await getRequestIsAdmin())) return Response.json({ error: "Forbidden" }, { status: 403 });
 
   const { data, error } = await supabaseService
     .from("invites")
@@ -17,7 +16,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const userId = await getRequestUserId();
-  if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId || !(await getRequestIsAdmin())) return Response.json({ error: "Forbidden" }, { status: 403 });
 
   const { email } = await request.json();
   if (!email) return Response.json({ error: "Email required" }, { status: 400 });
@@ -35,8 +34,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const userId = await getRequestUserId();
-  if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await getRequestIsAdmin())) return Response.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await request.json();
   if (!id) return Response.json({ error: "ID required" }, { status: 400 });

@@ -58,7 +58,7 @@ export default async function AdminPage() {
     { href: "/dashboard/events",   icon: Zap,       tone: "amber",   title: "Browse events",    desc: "Inspect detected ecosystem events with full context",                  note: `${stats.events} events · 24h` },
     { href: "/dashboard/ideas",    icon: Lightbulb, tone: "violet",  title: "Content ideas",    desc: "Manage generated content opportunities",                               note: `${stats.ideas} ideas` },
     { href: "/dashboard/summaries",icon: FileText,  tone: "ronin",   title: "Intel reports",    desc: "Review auto-summarized ecosystem briefings",                           note: "Updated every 4h" },
-    { href: "/dashboard/run",      icon: Play,      tone: "signal",  title: "Run pipeline",     desc: "Collect → process → summarize → ideate, end-to-end",                  note: "Manual trigger" },
+    { href: "/admin/pipeline",      icon: Play,      tone: "signal",  title: "Run pipeline",     desc: "Collect → process → summarize → ideate, end-to-end",                  note: "Manual trigger" },
   ];
 
   return (

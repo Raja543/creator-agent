@@ -303,7 +303,7 @@ export default async function DashboardPage() {
           </div>
           <div className="flex items-center gap-2 shrink-0 sm:pt-[18px]">
             <Link
-              href="/dashboard/run"
+              href="/admin/pipeline"
               className="cos-btn-primary"
               style={{ padding: "8px 16px", fontSize: 12, gap: 6, background: "var(--signal)", color: "var(--primary-foreground)", fontWeight: 700, display: "flex", alignItems: "center" }}
             >
@@ -532,6 +532,113 @@ export default async function DashboardPage() {
           </div>
         </div>
 
+        {/* ── Onboarding steps (hidden once user has events) ─────────────────── */}
+        {data.eventCount === 0 && (() => {
+          const hasSource = data.sourceCount > 0;
+          const steps = [
+            {
+              num: "01",
+              title: "Add your sources",
+              desc: "Add the X accounts you want to track across Ronin, Immutable and Abstract ecosystems.",
+              done: hasSource,
+              href: "/dashboard/sources",
+              label: hasSource ? `${data.sourceCount} source${data.sourceCount !== 1 ? "s" : ""} added` : "Add sources",
+              color: "#06b6d4",
+              bg: "rgba(6,182,212,0.1)",
+              border: "rgba(6,182,212,0.2)",
+            },
+            {
+              num: "02",
+              title: "Run your first pipeline",
+              desc: "Collect tweets from your sources, detect ecosystem events and generate content ideas.",
+              done: false,
+              href: "/admin/pipeline",
+              label: "Run pipeline",
+              color: "#4ade80",
+              bg: "rgba(74,222,128,0.1)",
+              border: "rgba(74,222,128,0.2)",
+              disabled: !hasSource,
+            },
+            {
+              num: "03",
+              title: "Explore your intelligence",
+              desc: "Events, ideas, reports and workflow populate automatically after the pipeline runs.",
+              done: false,
+              href: "/dashboard/events",
+              label: "View events",
+              color: "#8b5cf6",
+              bg: "rgba(139,92,246,0.1)",
+              border: "rgba(139,92,246,0.2)",
+              disabled: true,
+            },
+          ];
+
+          return (
+            <div style={{
+              background: "var(--surface)",
+              border: "1px solid var(--hairline)",
+              borderRadius: 14,
+              overflow: "hidden",
+            }}>
+              {/* Header */}
+              <div style={{ padding: "18px 20px 16px", borderBottom: "1px solid var(--hairline)" }}>
+                <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "var(--signal)", textTransform: "uppercase" as const, marginBottom: 4 }}>
+                  Getting started
+                </div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)", margin: 0 }}>
+                  {!hasSource ? "Welcome. Let's get your intelligence flowing." : "Almost there. Run the pipeline to see your first signals."}
+                </p>
+              </div>
+
+              {/* Steps */}
+              {steps.map((step, i) => (
+                <div key={step.num} style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 16,
+                  padding: "16px 20px",
+                  borderBottom: i < steps.length - 1 ? "1px solid var(--hairline)" : undefined,
+                  opacity: step.disabled ? 0.4 : 1,
+                }}>
+                  {/* Step indicator */}
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: step.done ? "rgba(74,222,128,0.12)" : step.bg,
+                    border: `1px solid ${step.done ? "rgba(74,222,128,0.3)" : step.border}`,
+                  }}>
+                    {step.done
+                      ? <span style={{ fontSize: 14, color: "var(--signal)" }}>✓</span>
+                      : <span style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, fontWeight: 700, color: step.color }}>{step.num}</span>
+                    }
+                  </div>
+
+                  {/* Content */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 13.5, fontWeight: 600, color: step.done ? "var(--fg-3)" : "var(--fg)", margin: "0 0 3px", textDecoration: step.done ? "line-through" : undefined }}>
+                      {step.title}
+                    </p>
+                    <p style={{ fontSize: 12.5, color: "var(--fg-4)", margin: 0, lineHeight: 1.5 }}>
+                      {step.desc}
+                    </p>
+                  </div>
+
+                  {/* Action */}
+                  {!step.disabled && (
+                    <Link
+                      href={step.href}
+                      className={step.done ? "cos-btn-ghost" : "cos-btn-primary"}
+                      style={{ fontSize: 12, padding: "7px 14px", flexShrink: 0, whiteSpace: "nowrap" as const }}
+                    >
+                      {step.label}
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
         {/* ── Last intel report ─────────────────────────────────────────────── */}
         {parsedSummary ? (
           <div className="cos-briefing">
@@ -572,7 +679,7 @@ export default async function DashboardPage() {
                 INTEL REPORT
                 <span style={{ color: "var(--fg-5)" }}>· no report yet</span>
               </div>
-              <Link href="/dashboard/run" className="cos-btn-ghost" style={{ fontSize: 11 }}>Generate →</Link>
+              <Link href="/admin/pipeline" className="cos-btn-ghost" style={{ fontSize: 11 }}>Generate →</Link>
             </div>
             <div className="cos-briefing-body">
               <p style={{ color: "var(--fg-4)", margin: 0 }}>Run the pipeline to generate your first intel report.</p>
@@ -665,113 +772,6 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
-
-        {/* ── Onboarding steps (hidden once user has events) ─────────────────── */}
-        {data.eventCount === 0 && (() => {
-          const hasSource = data.sourceCount > 0;
-          const steps = [
-            {
-              num: "01",
-              title: "Add your sources",
-              desc: "Add the X accounts you want to track across Ronin, Immutable and Abstract ecosystems.",
-              done: hasSource,
-              href: "/dashboard/sources",
-              label: hasSource ? `${data.sourceCount} source${data.sourceCount !== 1 ? "s" : ""} added` : "Add sources",
-              color: "#06b6d4",
-              bg: "rgba(6,182,212,0.1)",
-              border: "rgba(6,182,212,0.2)",
-            },
-            {
-              num: "02",
-              title: "Run your first pipeline",
-              desc: "Collect tweets from your sources, detect ecosystem events and generate content ideas.",
-              done: false,
-              href: "/dashboard/run",
-              label: "Run pipeline",
-              color: "#4ade80",
-              bg: "rgba(74,222,128,0.1)",
-              border: "rgba(74,222,128,0.2)",
-              disabled: !hasSource,
-            },
-            {
-              num: "03",
-              title: "Explore your intelligence",
-              desc: "Events, ideas, reports and workflow populate automatically after the pipeline runs.",
-              done: false,
-              href: "/dashboard/events",
-              label: "View events",
-              color: "#8b5cf6",
-              bg: "rgba(139,92,246,0.1)",
-              border: "rgba(139,92,246,0.2)",
-              disabled: true,
-            },
-          ];
-
-          return (
-            <div style={{
-              background: "var(--surface)",
-              border: "1px solid var(--hairline)",
-              borderRadius: 14,
-              overflow: "hidden",
-            }}>
-              {/* Header */}
-              <div style={{ padding: "18px 20px 16px", borderBottom: "1px solid var(--hairline)" }}>
-                <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "var(--signal)", textTransform: "uppercase" as const, marginBottom: 4 }}>
-                  Getting started
-                </div>
-                <p style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)", margin: 0 }}>
-                  {!hasSource ? "Welcome. Let's get your intelligence flowing." : "Almost there. Run the pipeline to see your first signals."}
-                </p>
-              </div>
-
-              {/* Steps */}
-              {steps.map((step, i) => (
-                <div key={step.num} style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 16,
-                  padding: "16px 20px",
-                  borderBottom: i < steps.length - 1 ? "1px solid var(--hairline)" : undefined,
-                  opacity: step.disabled ? 0.4 : 1,
-                }}>
-                  {/* Step indicator */}
-                  <div style={{
-                    width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    background: step.done ? "rgba(74,222,128,0.12)" : step.bg,
-                    border: `1px solid ${step.done ? "rgba(74,222,128,0.3)" : step.border}`,
-                  }}>
-                    {step.done
-                      ? <span style={{ fontSize: 14, color: "var(--signal)" }}>✓</span>
-                      : <span style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, fontWeight: 700, color: step.color }}>{step.num}</span>
-                    }
-                  </div>
-
-                  {/* Content */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 13.5, fontWeight: 600, color: step.done ? "var(--fg-3)" : "var(--fg)", margin: "0 0 3px", textDecoration: step.done ? "line-through" : undefined }}>
-                      {step.title}
-                    </p>
-                    <p style={{ fontSize: 12.5, color: "var(--fg-4)", margin: 0, lineHeight: 1.5 }}>
-                      {step.desc}
-                    </p>
-                  </div>
-
-                  {/* Action */}
-                  {!step.disabled && (
-                    <Link
-                      href={step.href}
-                      className={step.done ? "cos-btn-ghost" : "cos-btn-primary"}
-                      style={{ fontSize: 12, padding: "7px 14px", flexShrink: 0, whiteSpace: "nowrap" as const }}
-                    >
-                      {step.label}
-                    </Link>
-                  )}
-                </div>
-              ))}
-            </div>
-          );
-        })()}
 
       </div>
     </div>

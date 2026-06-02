@@ -39,8 +39,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Non-admin → dashboard
-  if (pathname.startsWith("/admin") && !isAdmin) {
+  // Only the invites page is admin-only; the rest of /admin is open to all users
+  if (pathname.startsWith("/admin/invites") && !isAdmin) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);

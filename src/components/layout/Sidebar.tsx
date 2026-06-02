@@ -18,7 +18,6 @@ import {
   X,
   Mail,
   LogOut,
-  Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -32,7 +31,6 @@ const navItems = [
   { href: "/dashboard/summaries", label: "Reports", icon: FileText },
   { href: "/dashboard/workflow", label: "Workflow", icon: Columns3 },
   { href: "/dashboard/activity", label: "Activity", icon: Activity },
-  { href: "/dashboard/run", label: "Run Pipeline", icon: Play },
 ];
 
 const adminItems = [

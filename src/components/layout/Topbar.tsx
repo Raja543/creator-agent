@@ -12,7 +12,6 @@ const ROUTE_NAMES: Record<string, string> = {
   "/dashboard/summaries": "Reports",
   "/dashboard/workflow":  "Workflow",
   "/dashboard/activity":  "Activity",
-  "/dashboard/run":       "Run Pipeline",
   "/admin":               "Admin Panel",
   "/admin/accounts":      "Accounts",
   "/admin/pipeline":      "Run Pipeline",
