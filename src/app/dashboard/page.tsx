@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { Radio, Zap, Lightbulb, Activity, FileText, Play } from "lucide-react";
+import { Radio, Zap, Lightbulb, Activity, FileText, Play, Target, TrendingUp, Pencil } from "lucide-react";
 import Link from "next/link";
 import { formatRelativeShort, formatTimestamp } from "@/lib/dates";
 import { scoreClass } from "@/lib/utils";
@@ -54,6 +54,7 @@ async function getData() {
     recentEvents,
     latestSummaryRes,
     pipelineCounts,
+    topIdeaRes,
   ] = await Promise.all([
     supabase.from("accounts").select("id", { count: "exact" }).eq("active", true),
     supabase.from("events").select("id", { count: "exact" }).gte("created_at", new Date(nowMs - 86400000).toISOString()),
@@ -70,6 +71,7 @@ async function getData() {
       supabase.from("content_ideas").select("id", { count: "exact" }).eq("status", "preparing"),
       supabase.from("content_ideas").select("id", { count: "exact" }).eq("status", "review"),
     ]),
+    supabase.from("content_ideas").select("id, title, potential").eq("status", "idea").order("priority", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   const [ideaCount, draftCount, prepCount, revCount] = pipelineCounts;
@@ -88,6 +90,7 @@ async function getData() {
     activities:     activities.data ?? [],
     recentEvents:   recentEvents.data ?? [],
     summary:        latestSummaryRes.data ?? null,
+    topIdea:        topIdeaRes.data ?? null,
     pipelineCounts: {
       idea:  ideaCount.count ?? 0,
       draft: draftCount.count ?? 0,
@@ -197,6 +200,16 @@ export default async function DashboardPage() {
   })();
 
 
+  // Most active ecosystem
+  const ecoCounts: Record<string, number> = {};
+  for (const ev of data.recentEvents) {
+    if (ev.ecosystem) ecoCounts[ev.ecosystem] = (ecoCounts[ev.ecosystem] ?? 0) + 1;
+  }
+  const topEco = Object.entries(ecoCounts).sort((a, b) => b[1] - a[1])[0] ?? null;
+
+  // Top event by score
+  const topEvent = [...data.recentEvents].sort((a, b) => (b.importance_score ?? 0) - (a.importance_score ?? 0))[0] ?? null;
+
   // Sparkline data
   const eventPts  = trendPoints(data.prevEventCount, data.eventCount);
   const sourcePts = trendPoints(Math.max(data.sourceCount - 3, 0), data.sourceCount);
@@ -296,6 +309,114 @@ export default async function DashboardPage() {
             </Link>
           </div>
         </div>
+
+        {/* ── Today's Focus ─────────────────────────────────────────────────── */}
+        {(topEvent || data.topIdea || topEco) && (
+          <div style={{
+            background: "linear-gradient(135deg, rgba(74,222,128,0.06) 0%, var(--surface) 60%)",
+            border: "1px solid rgba(74,222,128,0.15)",
+            borderRadius: 12,
+            overflow: "hidden",
+          }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "10px 16px",
+              borderBottom: "1px solid var(--hairline)",
+            }}>
+              <Target style={{ width: 13, height: 13, color: "var(--signal)" }} />
+              <span style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "var(--signal)" }}>
+                Today&apos;s Focus
+              </span>
+              <span style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10, color: "var(--fg-5)", marginLeft: 4 }}>
+                — where to start
+              </span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column" as const }}>
+
+              {/* Top signal */}
+              {topEvent && (
+                <Link href="/dashboard/events" style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "11px 16px",
+                  borderBottom: "1px solid var(--hairline)",
+                  textDecoration: "none",
+                  transition: "background 0.15s",
+                }} className="hover:bg-white/[0.03]">
+                  <div style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.2)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                    <TrendingUp style={{ width: 13, height: 13, color: "#f59e0b" }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: "#f59e0b", marginBottom: 2 }}>Biggest signal right now</div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{topEvent.title}</div>
+                  </div>
+                  {topEvent.importance_score != null && (
+                    <span className={`cos-score ${scoreClass(topEvent.importance_score)}`} style={{ flexShrink: 0 }}>{topEvent.importance_score}</span>
+                  )}
+                  <span style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10, color: "var(--fg-5)", flexShrink: 0 }}>→</span>
+                </Link>
+              )}
+
+              {/* Best idea */}
+              {data.topIdea && (
+                <Link href="/dashboard/pipeline" style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "11px 16px",
+                  borderBottom: topEco ? "1px solid var(--hairline)" : undefined,
+                  textDecoration: "none",
+                  transition: "background 0.15s",
+                }} className="hover:bg-white/[0.03]">
+                  <div style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.2)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                    <Pencil style={{ width: 13, height: 13, color: "#8b5cf6" }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: "#8b5cf6", marginBottom: 2 }}>Best idea to work on</div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{data.topIdea.title as string}</div>
+                  </div>
+                  {data.topIdea.potential && (
+                    <span style={{
+                      fontFamily: "var(--font-geist-mono)", fontSize: 9.5, fontWeight: 700,
+                      letterSpacing: "0.06em", textTransform: "uppercase" as const,
+                      padding: "3px 8px", borderRadius: 5, flexShrink: 0,
+                      background: data.topIdea.potential === "high" ? "rgba(74,222,128,0.12)" : "rgba(245,158,11,0.12)",
+                      color: data.topIdea.potential === "high" ? "var(--signal)" : "#f59e0b",
+                      border: `1px solid ${data.topIdea.potential === "high" ? "rgba(74,222,128,0.2)" : "rgba(245,158,11,0.2)"}`,
+                    }}>{data.topIdea.potential as string}</span>
+                  )}
+                  <span style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10, color: "var(--fg-5)", flexShrink: 0 }}>→</span>
+                </Link>
+              )}
+
+              {/* Most active ecosystem */}
+              {topEco && (() => {
+                const ecoColors: Record<string, { color: string; bg: string; border: string }> = {
+                  ronin:     { color: "#3b82f6", bg: "rgba(59,130,246,0.12)",  border: "rgba(59,130,246,0.2)" },
+                  immutable: { color: "#a855f7", bg: "rgba(168,85,247,0.12)", border: "rgba(168,85,247,0.2)" },
+                  abstract:  { color: "#10b981", bg: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.2)" },
+                };
+                const p = ecoColors[topEco[0].toLowerCase()] ?? { color: "var(--fg-3)", bg: "rgba(255,255,255,0.06)", border: "rgba(255,255,255,0.1)" };
+                return (
+                  <Link href="/dashboard/events" style={{
+                    display: "flex", alignItems: "center", gap: 12,
+                    padding: "11px 16px",
+                    textDecoration: "none",
+                    transition: "background 0.15s",
+                  }} className="hover:bg-white/[0.03]">
+                    <div style={{ width: 28, height: 28, borderRadius: 7, background: p.bg, border: `1px solid ${p.border}`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                      <Zap style={{ width: 13, height: 13, color: p.color }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: p.color, marginBottom: 2 }}>Most active ecosystem</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>
+                        {topEco[0].charAt(0).toUpperCase() + topEco[0].slice(1)} — {topEco[1]} signal{topEco[1] !== 1 ? "s" : ""} in the last 24h
+                      </div>
+                    </div>
+                    <span style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10, color: "var(--fg-5)", flexShrink: 0 }}>→</span>
+                  </Link>
+                );
+              })()}
+            </div>
+          </div>
+        )}
 
         {/* ── KPI grid ──────────────────────────────────────────────────────── */}
         <div className="cos-kpi-grid">
