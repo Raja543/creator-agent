@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-server";
+import { getRequestUserId } from "@/lib/auth-headers";
 import { SourcesClient } from "@/components/sources/SourcesClient";
 import Link from "next/link";
 import type { Ecosystem } from "@/lib/database.types";
@@ -20,14 +21,15 @@ export default async function SourcesPage({ searchParams }: PageProps) {
   const { ecosystem } = await searchParams;
   const activeFilter = ecosystem ?? "all";
 
+  const [userId, supabase] = await Promise.all([getRequestUserId(), createClient()]);
+
   let query = supabase
     .from("accounts")
     .select("*")
+    .eq("user_id", userId!)
     .order("priority", { ascending: false });
 
-  if (activeFilter !== "all") {
-    query = query.eq("ecosystem", activeFilter as Ecosystem);
-  }
+  if (activeFilter !== "all") query = query.eq("ecosystem", activeFilter as Ecosystem);
 
   const { data, error } = await query;
   const sources = data ?? [];
@@ -39,7 +41,6 @@ export default async function SourcesPage({ searchParams }: PageProps) {
         <h1 className="cos-page-title">Sources</h1>
         <p className="cos-page-sub">Tracked accounts across all monitored ecosystems. {sources.length} active.</p>
       </div>
-
       <div className="cos-filter-bar">
         {ECOSYSTEM_TABS.map((tab) => (
           <Link
@@ -51,13 +52,11 @@ export default async function SourcesPage({ searchParams }: PageProps) {
           </Link>
         ))}
       </div>
-
       {error && (
         <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "var(--rose-dim)", color: "var(--rose)", border: "1px solid rgba(244,63,94,.2)" }}>
           Failed to load sources: {error.message}
         </div>
       )}
-
       <SourcesClient key={activeFilter} initialSources={sources} activeFilter={activeFilter} />
     </div>
   );

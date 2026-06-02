@@ -1,12 +1,16 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-server";
+import { getRequestUserId } from "@/lib/auth-headers";
 import { AdminAccountsClient } from "@/components/admin/AdminAccountsClient";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export default async function AdminAccountsPage() {
+  const [userId, supabase] = await Promise.all([getRequestUserId(), createClient()]);
+
   const { data: accounts } = await supabase
     .from("accounts")
     .select("*")
+    .eq("user_id", userId!)
     .order("priority", { ascending: false })
     .order("created_at", { ascending: false });
 

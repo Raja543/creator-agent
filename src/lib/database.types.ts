@@ -48,6 +48,7 @@ export interface Database {
       accounts: {
         Row: {
           id: string;
+          user_id: string | null;
           username: string;
           display_name: string | null;
           ecosystem: Ecosystem | null;
@@ -62,6 +63,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
+          user_id?: string | null;
           username: string;
           display_name?: string | null;
           ecosystem?: Ecosystem | null;
@@ -76,6 +78,7 @@ export interface Database {
         };
         Update: {
           id?: string;
+          user_id?: string | null;
           username?: string;
           display_name?: string | null;
           ecosystem?: Ecosystem | null;
@@ -92,6 +95,7 @@ export interface Database {
       tweets: {
         Row: {
           id: string;
+          user_id: string | null;
           tweet_id: string;
           username: string | null;
           display_name: string | null;
@@ -127,6 +131,7 @@ export interface Database {
       events: {
         Row: {
           id: string;
+          user_id: string | null;
           title: string | null;
           summary: string | null;
           ecosystem: Ecosystem | null;
@@ -152,6 +157,7 @@ export interface Database {
       summaries: {
         Row: {
           id: string;
+          user_id: string | null;
           timeframe: string | null;
           ecosystems: string[] | null;
           content: string | null;
@@ -169,6 +175,7 @@ export interface Database {
       content_ideas: {
         Row: {
           id: string;
+          user_id: string | null;
           title: string | null;
           description: string | null;
           format: ContentFormat | null;
@@ -198,6 +205,7 @@ export interface Database {
       activities: {
         Row: {
           id: string;
+          user_id: string | null;
           type: ActivityType | null;
           message: string | null;
           metadata: Json | null;
@@ -205,12 +213,32 @@ export interface Database {
         };
         Insert: {
           id?: string;
+          user_id?: string | null;
           type?: ActivityType | null;
           message?: string | null;
           metadata?: Json | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["activities"]["Insert"]>;
+      };
+      invites: {
+        Row: {
+          id: string;
+          email: string;
+          code: string;
+          invited_by: string | null;
+          used_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          code: string;
+          invited_by?: string | null;
+          used_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["invites"]["Insert"]>;
       };
     };
   };
@@ -223,3 +251,4 @@ export type Event = Database["public"]["Tables"]["events"]["Row"];
 export type Summary = Database["public"]["Tables"]["summaries"]["Row"];
 export type ContentIdea = Database["public"]["Tables"]["content_ideas"]["Row"];
 export type Activity = Database["public"]["Tables"]["activities"]["Row"];
+export type Invite = Database["public"]["Tables"]["invites"]["Row"];

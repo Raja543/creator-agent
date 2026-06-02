@@ -10,11 +10,13 @@ const ROUTE_NAMES: Record<string, string> = {
   "/dashboard/events":    "Events",
   "/dashboard/ideas":     "Ideas",
   "/dashboard/summaries": "Reports",
-  "/dashboard/pipeline":  "Pipeline",
+  "/dashboard/workflow":  "Workflow",
   "/dashboard/activity":  "Activity",
+  "/dashboard/run":       "Run Pipeline",
   "/admin":               "Admin Panel",
   "/admin/accounts":      "Accounts",
   "/admin/pipeline":      "Run Pipeline",
+  "/admin/invites":       "Invites",
 };
 
 export function Topbar() {

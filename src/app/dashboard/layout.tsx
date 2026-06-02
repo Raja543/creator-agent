@@ -1,10 +1,13 @@
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
+import { getRequestIsAdmin } from "@/lib/auth-headers";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const isAdmin = await getRequestIsAdmin();
+
   return (
     <div className="h-screen overflow-hidden bg-background" style={{ display: "grid", gridTemplateColumns: "auto 1fr" }}>
-      <Sidebar />
+      <Sidebar isAdmin={isAdmin} />
       <div className="flex flex-col min-w-0 overflow-hidden transition-all duration-200">
         {/* Mobile top bar */}
         <div className="md:hidden flex items-center h-14 px-4 pl-16 border-b border-border shrink-0" style={{ background: "var(--bg-elev)" }}>

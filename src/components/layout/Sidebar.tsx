@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Radio,
@@ -16,9 +16,13 @@ import {
   FileText,
   Menu,
   X,
+  Mail,
+  LogOut,
+  Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase-browser";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -26,14 +30,16 @@ const navItems = [
   { href: "/dashboard/events", label: "Events", icon: Zap },
   { href: "/dashboard/ideas", label: "Ideas", icon: Lightbulb },
   { href: "/dashboard/summaries", label: "Reports", icon: FileText },
-  { href: "/dashboard/pipeline", label: "Pipeline", icon: Columns3 },
+  { href: "/dashboard/workflow", label: "Workflow", icon: Columns3 },
   { href: "/dashboard/activity", label: "Activity", icon: Activity },
+  { href: "/dashboard/run", label: "Run Pipeline", icon: Play },
 ];
 
 const adminItems = [
   { href: "/admin", label: "Admin Panel", icon: Shield },
   { href: "/admin/accounts", label: "Manage Accounts", icon: Settings },
   { href: "/admin/pipeline", label: "Run Pipeline", icon: Zap },
+  { href: "/admin/invites", label: "Invites", icon: Mail },
 ];
 
 function NavLink({
@@ -78,7 +84,28 @@ function NavLink({
   );
 }
 
-function SidebarContent({ onClose, collapsed, onToggleCollapse }: { onClose?: () => void; collapsed?: boolean; onToggleCollapse?: () => void }) {
+function SidebarContent({ onClose, collapsed, onToggleCollapse, isAdmin }: { onClose?: () => void; collapsed?: boolean; onToggleCollapse?: () => void; isAdmin?: boolean }) {
+  const router = useRouter();
+  const [name, setName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser()
+      .then(({ data: { user } }) => {
+        // Prefer the name set at signup; fall back to the email's local part
+        const fullName = user?.user_metadata?.full_name as string | undefined;
+        setName(fullName?.trim() || user?.email?.split("@")[0] || null);
+      })
+      .catch(() => {});
+  }, []);
+
+  async function signOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
+
   return (
     <>
       {/* Logo */}
@@ -130,50 +157,77 @@ function SidebarContent({ onClose, collapsed, onToggleCollapse }: { onClose?: ()
               Admin
             </p>
           )}
-          {adminItems.map((item) => (
-            <NavLink key={item.href} item={item} onClick={onClose} collapsed={collapsed} />
-          ))}
+          {adminItems.map((item) => {
+            if (item.href === "/admin/invites" && !isAdmin) return null;
+            return <NavLink key={item.href} item={item} onClick={onClose} collapsed={collapsed} />;
+          })}
         </div>
       </nav>
 
       {/* Footer */}
-      <div className={cn("border-t border-sidebar-border", collapsed ? "px-2 py-3" : "px-5 py-3")}>
+      <div className={cn("border-t border-sidebar-border", collapsed ? "px-2 py-3" : "px-3 py-3")}>
         {collapsed ? (
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-2">
             <span className="relative flex size-2 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
               <span className="relative inline-flex rounded-full size-2 bg-green-400" />
             </span>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="relative flex size-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                <span className="relative inline-flex rounded-full size-2 bg-green-400" />
-              </span>
-              <span className="text-xs text-muted-foreground">System Active</span>
-            </div>
+            <button
+              onClick={signOut}
+              title="Sign out"
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-colors"
+            >
+              <LogOut className="size-3.5" />
+            </button>
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                title="Collapse sidebar"
+                title="Expand sidebar"
                 className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-colors"
               >
-                <ChevronLeft className="size-4" />
+                <ChevronRight className="size-4" />
               </button>
             )}
           </div>
-        )}
-        {collapsed && onToggleCollapse && (
-          <div className="flex justify-center mt-2">
-            <button
-              onClick={onToggleCollapse}
-              title="Expand sidebar"
-              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-colors"
-            >
-              <ChevronRight className="size-4" />
-            </button>
+        ) : (
+          <div className="space-y-2">
+            {/* User row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="size-6 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
+                  <span className="text-[9px] font-bold text-primary uppercase">
+                    {name ? name[0] : "?"}
+                  </span>
+                </div>
+                <span className="text-xs text-muted-foreground truncate capitalize">{name ?? "..."}</span>
+              </div>
+              <button
+                onClick={signOut}
+                title="Sign out"
+                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-colors shrink-0"
+              >
+                <LogOut className="size-3.5" />
+              </button>
+            </div>
+            {/* System status + collapse */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="relative flex size-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full size-2 bg-green-400" />
+                </span>
+                <span className="text-xs text-muted-foreground">System Active</span>
+              </div>
+              {onToggleCollapse && (
+                <button
+                  onClick={onToggleCollapse}
+                  title="Collapse sidebar"
+                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-colors"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -181,12 +235,14 @@ function SidebarContent({ onClose, collapsed, onToggleCollapse }: { onClose?: ()
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ isAdmin }: { isAdmin?: boolean }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("sidebar-collapsed") === "true";
-  });
+  // Always start false to match server render, then sync from localStorage after mount
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    setCollapsed(localStorage.getItem("sidebar-collapsed") === "true");
+  }, []);
 
   function toggleCollapsed() {
     const next = !collapsed;
@@ -203,7 +259,7 @@ export function Sidebar() {
           collapsed ? "w-14" : "w-56"
         )}
       >
-        <SidebarContent collapsed={collapsed} onToggleCollapse={toggleCollapsed} />
+        <SidebarContent collapsed={collapsed} onToggleCollapse={toggleCollapsed} isAdmin={isAdmin} />
       </aside>
 
       {/* ── Mobile: hamburger trigger ── */}
@@ -226,7 +282,7 @@ export function Sidebar() {
       {/* ── Mobile: drawer ── */}
       {mobileOpen && (
         <aside className="fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-sidebar border-r border-sidebar-border md:hidden">
-          <SidebarContent onClose={() => setMobileOpen(false)} />
+          <SidebarContent onClose={() => setMobileOpen(false)} isAdmin={isAdmin} />
         </aside>
       )}
     </>

@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-server";
+import { getRequestUserId } from "@/lib/auth-headers";
 import { PipelineClient } from "@/components/pipeline/PipelineClient";
 import type { PipelineStatus } from "@/lib/database.types";
 
@@ -10,12 +11,15 @@ const STAGES: { id: PipelineStatus; label: string; color: string }[] = [
   { id: "published", label: "Published", color: "text-green-400" },
 ];
 
-export const revalidate = 30;
+export const dynamic = "force-dynamic";
 
 export default async function PipelinePage() {
+  const [userId, supabase] = await Promise.all([getRequestUserId(), createClient()]);
+
   const { data: ideas } = await supabase
     .from("content_ideas")
     .select("*")
+    .eq("user_id", userId!)
     .order("priority", { ascending: false })
     .order("created_at", { ascending: false });
 
@@ -27,7 +31,7 @@ export default async function PipelinePage() {
     <div className="cos-page space-y-4">
       <div className="cos-page-head">
         <div className="cos-eyebrow">Content · Kanban</div>
-        <h1 className="cos-page-title">Pipeline</h1>
+        <h1 className="cos-page-title">Workflow</h1>
         <p className="cos-page-sub hidden md:block">Drag cards between columns to update status.</p>
         <p className="cos-page-sub md:hidden">Tap a stage to view and move cards.</p>
       </div>

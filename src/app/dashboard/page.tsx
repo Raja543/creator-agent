@@ -1,10 +1,11 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-server";
+import { getRequestUserId } from "@/lib/auth-headers";
 import { Radio, Zap, Lightbulb, Activity, FileText, Play, Target, TrendingUp, Pencil } from "lucide-react";
 import Link from "next/link";
 import { formatRelativeShort, formatTimestamp } from "@/lib/dates";
 import { scoreClass } from "@/lib/utils";
 
-export const revalidate = 30;
+export const dynamic = "force-dynamic";
 
 // Generates 6 sparkline points trending from prev→curr with subtle wave
 function trendPoints(prev: number, curr: number): number[] {
@@ -43,7 +44,8 @@ function Sparkline({ pts, color }: { pts: number[]; color: string }) {
 
 // ── Data fetching ─────────────────────────────────────────────────────────────
 
-async function getData() {
+async function getData(userId: string) {
+  const supabase = await createClient();
   const nowMs = Date.now();
   const [
     sources,
@@ -56,22 +58,22 @@ async function getData() {
     pipelineCounts,
     topIdeaRes,
   ] = await Promise.all([
-    supabase.from("accounts").select("id", { count: "exact" }).eq("active", true),
-    supabase.from("events").select("id", { count: "exact" }).gte("created_at", new Date(nowMs - 86400000).toISOString()),
-    supabase.from("events").select("id", { count: "exact" })
+    supabase.from("accounts").select("id", { count: "exact" }).eq("user_id", userId).eq("active", true),
+    supabase.from("events").select("id", { count: "exact" }).eq("user_id", userId).gte("created_at", new Date(nowMs - 86400000).toISOString()),
+    supabase.from("events").select("id", { count: "exact" }).eq("user_id", userId)
       .gte("created_at", new Date(nowMs - 172800000).toISOString())
       .lt("created_at", new Date(nowMs - 86400000).toISOString()),
-    supabase.from("content_ideas").select("id", { count: "exact" }),
-    supabase.from("activities").select("*").order("created_at", { ascending: false }).limit(6),
-    supabase.from("events").select("*").order("created_at", { ascending: false }).limit(14),
-    supabase.from("summaries").select("*").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("content_ideas").select("id", { count: "exact" }).eq("user_id", userId),
+    supabase.from("activities").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(6),
+    supabase.from("events").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(14),
+    supabase.from("summaries").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     Promise.all([
-      supabase.from("content_ideas").select("id", { count: "exact" }).eq("status", "idea"),
-      supabase.from("content_ideas").select("id", { count: "exact" }).eq("status", "draft"),
-      supabase.from("content_ideas").select("id", { count: "exact" }).eq("status", "preparing"),
-      supabase.from("content_ideas").select("id", { count: "exact" }).eq("status", "review"),
+      supabase.from("content_ideas").select("id", { count: "exact" }).eq("user_id", userId).eq("status", "idea"),
+      supabase.from("content_ideas").select("id", { count: "exact" }).eq("user_id", userId).eq("status", "draft"),
+      supabase.from("content_ideas").select("id", { count: "exact" }).eq("user_id", userId).eq("status", "preparing"),
+      supabase.from("content_ideas").select("id", { count: "exact" }).eq("user_id", userId).eq("status", "review"),
     ]),
-    supabase.from("content_ideas").select("id, title, potential").eq("status", "idea").order("priority", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("content_ideas").select("id, title, potential").eq("user_id", userId).eq("status", "idea").order("priority", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   const [ideaCount, draftCount, prepCount, revCount] = pipelineCounts;
@@ -138,7 +140,8 @@ function ActivityRow({ a }: { a: { id: string; created_at: string; type: string 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
-  const data = await getData();
+  const userId = await getRequestUserId();
+  const data = await getData(userId!);
   const totalPipeline = data.pipelineCounts.idea + data.pipelineCounts.draft + data.pipelineCounts.prep + data.pipelineCounts.rev;
 
   // Date label — "16th May Saturday"
@@ -300,7 +303,7 @@ export default async function DashboardPage() {
           </div>
           <div className="flex items-center gap-2 shrink-0 sm:pt-[18px]">
             <Link
-              href="/admin/pipeline"
+              href="/dashboard/run"
               className="cos-btn-primary"
               style={{ padding: "8px 16px", fontSize: 12, gap: 6, background: "var(--signal)", color: "var(--primary-foreground)", fontWeight: 700, display: "flex", alignItems: "center" }}
             >
@@ -358,7 +361,7 @@ export default async function DashboardPage() {
 
               {/* Best idea */}
               {data.topIdea && (
-                <Link href="/dashboard/pipeline" style={{
+                <Link href="/dashboard/workflow" style={{
                   display: "flex", alignItems: "center", gap: 12,
                   padding: "11px 16px",
                   borderBottom: topEco ? "1px solid var(--hairline)" : undefined,
@@ -569,7 +572,7 @@ export default async function DashboardPage() {
                 INTEL REPORT
                 <span style={{ color: "var(--fg-5)" }}>· no report yet</span>
               </div>
-              <Link href="/admin/pipeline" className="cos-btn-ghost" style={{ fontSize: 11 }}>Generate →</Link>
+              <Link href="/dashboard/run" className="cos-btn-ghost" style={{ fontSize: 11 }}>Generate →</Link>
             </div>
             <div className="cos-briefing-body">
               <p style={{ color: "var(--fg-4)", margin: 0 }}>Run the pipeline to generate your first intel report.</p>
@@ -637,8 +640,8 @@ export default async function DashboardPage() {
             {/* Pipeline overview */}
             <div className="cos-card">
               <div className="cos-card-head" style={{ padding: "10px 14px" }}>
-                <span className="cos-card-title">Pipeline · {totalPipeline} items</span>
-                <Link href="/dashboard/pipeline" className="cos-btn-ghost" style={{ fontSize: 10.5 }}>Board →</Link>
+                <span className="cos-card-title">Workflow · {totalPipeline} items</span>
+                <Link href="/dashboard/workflow" className="cos-btn-ghost" style={{ fontSize: 10.5 }}>Board →</Link>
               </div>
               <div className="cos-card-body" style={{ padding: "12px 14px" }}>
                 {[
@@ -663,40 +666,112 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Empty state / quick-start ─────────────────────────────────────── */}
-        {data.sourceCount === 0 && (
-          <div
-            className="flex items-center gap-4 rounded-lg px-5 py-4"
-            style={{ background: "var(--signal-glow)", border: "1px solid rgba(74,222,128,.15)" }}
-          >
-            <div className="size-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "var(--signal-dim)", color: "var(--signal)" }}>
-              <Radio className="size-4" />
-            </div>
-            <div className="flex-1">
-              <p className="font-medium text-foreground text-sm">Get started: add your first sources</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--fg-3)" }}>
-                Add X accounts to track, or use Admin → Manage Accounts to bulk-add by ecosystem.
-              </p>
-            </div>
-            <Link href="/admin/accounts" className="cos-btn-primary shrink-0">Add Sources</Link>
-          </div>
-        )}
+        {/* ── Onboarding steps (hidden once user has events) ─────────────────── */}
+        {data.eventCount === 0 && (() => {
+          const hasSource = data.sourceCount > 0;
+          const steps = [
+            {
+              num: "01",
+              title: "Add your sources",
+              desc: "Add the X accounts you want to track across Ronin, Immutable and Abstract ecosystems.",
+              done: hasSource,
+              href: "/dashboard/sources",
+              label: hasSource ? `${data.sourceCount} source${data.sourceCount !== 1 ? "s" : ""} added` : "Add sources",
+              color: "#06b6d4",
+              bg: "rgba(6,182,212,0.1)",
+              border: "rgba(6,182,212,0.2)",
+            },
+            {
+              num: "02",
+              title: "Run your first pipeline",
+              desc: "Collect tweets from your sources, detect ecosystem events and generate content ideas.",
+              done: false,
+              href: "/dashboard/run",
+              label: "Run pipeline",
+              color: "#4ade80",
+              bg: "rgba(74,222,128,0.1)",
+              border: "rgba(74,222,128,0.2)",
+              disabled: !hasSource,
+            },
+            {
+              num: "03",
+              title: "Explore your intelligence",
+              desc: "Events, ideas, reports and workflow populate automatically after the pipeline runs.",
+              done: false,
+              href: "/dashboard/events",
+              label: "View events",
+              color: "#8b5cf6",
+              bg: "rgba(139,92,246,0.1)",
+              border: "rgba(139,92,246,0.2)",
+              disabled: true,
+            },
+          ];
 
-        {!data.summary && data.sourceCount > 0 && (
-          <div
-            className="flex items-center gap-4 rounded-lg px-5 py-4"
-            style={{ background: "rgba(139,92,246,.05)", border: "1px solid rgba(139,92,246,.15)" }}
-          >
-            <div className="size-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "var(--violet-dim)", color: "var(--violet)" }}>
-              <FileText className="size-4" />
+          return (
+            <div style={{
+              background: "var(--surface)",
+              border: "1px solid var(--hairline)",
+              borderRadius: 14,
+              overflow: "hidden",
+            }}>
+              {/* Header */}
+              <div style={{ padding: "18px 20px 16px", borderBottom: "1px solid var(--hairline)" }}>
+                <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "var(--signal)", textTransform: "uppercase" as const, marginBottom: 4 }}>
+                  Getting started
+                </div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)", margin: 0 }}>
+                  {!hasSource ? "Welcome. Let's get your intelligence flowing." : "Almost there. Run the pipeline to see your first signals."}
+                </p>
+              </div>
+
+              {/* Steps */}
+              {steps.map((step, i) => (
+                <div key={step.num} style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 16,
+                  padding: "16px 20px",
+                  borderBottom: i < steps.length - 1 ? "1px solid var(--hairline)" : undefined,
+                  opacity: step.disabled ? 0.4 : 1,
+                }}>
+                  {/* Step indicator */}
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: step.done ? "rgba(74,222,128,0.12)" : step.bg,
+                    border: `1px solid ${step.done ? "rgba(74,222,128,0.3)" : step.border}`,
+                  }}>
+                    {step.done
+                      ? <span style={{ fontSize: 14, color: "var(--signal)" }}>✓</span>
+                      : <span style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, fontWeight: 700, color: step.color }}>{step.num}</span>
+                    }
+                  </div>
+
+                  {/* Content */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 13.5, fontWeight: 600, color: step.done ? "var(--fg-3)" : "var(--fg)", margin: "0 0 3px", textDecoration: step.done ? "line-through" : undefined }}>
+                      {step.title}
+                    </p>
+                    <p style={{ fontSize: 12.5, color: "var(--fg-4)", margin: 0, lineHeight: 1.5 }}>
+                      {step.desc}
+                    </p>
+                  </div>
+
+                  {/* Action */}
+                  {!step.disabled && (
+                    <Link
+                      href={step.href}
+                      className={step.done ? "cos-btn-ghost" : "cos-btn-primary"}
+                      style={{ fontSize: 12, padding: "7px 14px", flexShrink: 0, whiteSpace: "nowrap" as const }}
+                    >
+                      {step.label}
+                    </Link>
+                  )}
+                </div>
+              ))}
             </div>
-            <div className="flex-1">
-              <p className="font-medium text-foreground text-sm">No intel reports yet</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--fg-3)" }}>Run the full pipeline to generate your first ecosystem briefing.</p>
-            </div>
-            <Link href="/admin/pipeline" className="cos-btn-ghost">Run Pipeline →</Link>
-          </div>
-        )}
+          );
+        })()}
 
       </div>
     </div>

@@ -1,8 +1,9 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-server";
+import { getRequestUserId } from "@/lib/auth-headers";
 import type { ActivityType } from "@/lib/database.types";
 import { formatTime, formatActivityDate } from "@/lib/dates";
 
-export const revalidate = 30;
+export const dynamic = "force-dynamic";
 
 function groupByDate(items: { id: string; type: ActivityType | null; message: string | null; created_at: string }[]) {
   const groups: Map<string, typeof items> = new Map();
@@ -35,9 +36,12 @@ function kindColor(kind: string) {
 }
 
 export default async function ActivityPage() {
+  const [userId, supabase] = await Promise.all([getRequestUserId(), createClient()]);
+
   const { data, error } = await supabase
     .from("activities")
     .select("*")
+    .eq("user_id", userId!)
     .order("created_at", { ascending: false })
     .limit(100);
 
@@ -95,7 +99,6 @@ export default async function ActivityPage() {
               </div>
             </div>
           ))}
-
           <p style={{ textAlign: "center", fontFamily: "var(--font-geist-mono)", fontSize: 10.5, color: "var(--fg-5)" }}>
             Showing latest {activities.length} activities
           </p>

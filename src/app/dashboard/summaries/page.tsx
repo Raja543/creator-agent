@@ -1,12 +1,16 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-server";
+import { getRequestUserId } from "@/lib/auth-headers";
 import { SummariesClient } from "@/components/summaries/SummariesClient";
 
-export const revalidate = 120;
+export const dynamic = "force-dynamic";
 
 export default async function SummariesPage() {
+  const [userId, supabase] = await Promise.all([getRequestUserId(), createClient()]);
+
   const { data: summaries } = await supabase
     .from("summaries")
     .select("*")
+    .eq("user_id", userId!)
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -19,7 +23,6 @@ export default async function SummariesPage() {
           {summaries?.length ?? 0} report{summaries?.length !== 1 ? "s" : ""} generated synthesized ecosystem briefings from collection windows.
         </p>
       </div>
-
       <SummariesClient summaries={summaries ?? []} />
     </div>
   );
