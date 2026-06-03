@@ -165,16 +165,15 @@ export default async function DashboardPage() {
   const ecoSet = new Set(data.recentEvents.map((e: { ecosystem?: string | null }) => e.ecosystem).filter((e): e is string => !!e));
   const activeEcos = [...ecoSet];
 
-  // Parse summary using the same logic as the reports page (SummariesClient)
+  // Parse the latest summary (JSON: ecosystem keys + "overall")
   const parsedSummary = (() => {
     const s = data.summary as { content?: string } | null;
     if (!s?.content) return null;
-    // Mirror parseSections() from SummariesClient exactly
     const sections: Record<string, string> = {};
     try {
       const parsed = JSON.parse(s.content) as Record<string, unknown>;
       for (const [k, v] of Object.entries(parsed))
-        if (typeof v === "string") sections[k.toUpperCase()] = v;
+        if (typeof v === "string") sections[k] = v;
     } catch {
       const parts = s.content.split(/\n\n(?=[A-Z]+\n)/);
       for (const part of parts) {
@@ -182,18 +181,22 @@ export default async function DashboardPage() {
         sections[lines[0]] = lines.slice(1).join("\n").trim();
       }
     }
-    const overall = sections["OVERALL"] ?? sections["overall"] ?? "";
-    return { overall, sections };
+    const overallKey = Object.keys(sections).find((k) => k.toLowerCase() === "overall");
+    const overall = overallKey ? sections[overallKey] : "";
+    const ecoKeys = Object.keys(sections).filter((k) => k.toLowerCase() !== "overall");
+    return { overall, sections, ecoKeys };
   })();
 
-  function highlightEcos(text: string) {
-    const parts = text.split(/\b(Ronin|Immutable|Abstract)\b/gi);
-    return parts.map((part, i) => {
-      const up = part.toUpperCase();
-      if (up === "RONIN")     return <span key={i} style={{ color: "#3b82f6", fontWeight: 700 }}>{part}</span>;
-      if (up === "IMMUTABLE") return <span key={i} style={{ color: "#a855f7", fontWeight: 700 }}>{part}</span>;
-      if (up === "ABSTRACT")  return <span key={i} style={{ color: "#10b981", fontWeight: 700 }}>{part}</span>;
-      return part;
+  // Bold any of the user's ecosystem names where they appear in the overall text
+  function highlightEcos(text: string, ecoNames: string[]) {
+    if (!ecoNames.length) return text;
+    const escaped = ecoNames.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const re = new RegExp(`\\b(${escaped.join("|")})\\b`, "gi");
+    return text.split(re).map((part, i) => {
+      const match = ecoNames.find((e) => e.toLowerCase() === part.toLowerCase());
+      return match
+        ? <span key={i} style={{ color: ecoColor(match).hex, fontWeight: 700 }}>{part}</span>
+        : part;
     });
   }
 
@@ -641,7 +644,7 @@ export default async function DashboardPage() {
             {parsedSummary.overall && (
               <div className="cos-briefing-body">
                 <p style={{ fontSize: 14, lineHeight: 1.65, color: "var(--fg)", margin: 0 }}>
-                  {highlightEcos(parsedSummary.overall)}
+                  {highlightEcos(parsedSummary.overall, parsedSummary.ecoKeys)}
                 </p>
               </div>
             )}
@@ -649,9 +652,10 @@ export default async function DashboardPage() {
               <Link href="/dashboard/summaries" style={{ color: "var(--fg-4)", textDecoration: "none", fontFamily: "var(--font-geist-mono)", fontSize: 10, letterSpacing: "0.06em" }}>
                 READ FULL REPORT →
               </Link>
-              {["RONIN","IMMUTABLE","ABSTRACT"].filter(e => parsedSummary.sections[e]).map(e => {
-                const colors: Record<string,string> = { RONIN:"#3b82f6", IMMUTABLE:"#a855f7", ABSTRACT:"#10b981" };
-                return <span key={e} className="cos-briefing-angle" style={{ color: colors[e], background: `${colors[e]}18`, border: `1px solid ${colors[e]}30` }}>{e.charAt(0)+e.slice(1).toLowerCase()}</span>;
+              {parsedSummary.ecoKeys.map((eco) => {
+                const c = ecoColor(eco);
+                const label = eco.replace(/[_-]/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+                return <span key={eco} className="cos-briefing-angle" style={{ color: c.hex, background: `${c.hex}18`, border: `1px solid ${c.hex}30` }}>{label}</span>;
               })}
             </div>
           </div>

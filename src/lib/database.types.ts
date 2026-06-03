@@ -1,25 +1,11 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-// Ecosystem and account category are user-defined (free-form) in beta —
-// users type their own when adding sources, so these are open strings.
+// Ecosystem, account category, and event category are all free-form in beta —
+// users define ecosystems/categories on sources, and the AI emits event
+// categories that best fit the content rather than a fixed vocabulary.
 export type Ecosystem = string;
 export type AccountCategory = string;
-
-export type EventCategory =
-  | "campaign"
-  | "launch"
-  | "partnership"
-  | "migration"
-  | "staking"
-  | "gameplay"
-  | "tournament"
-  | "funding"
-  | "metrics"
-  | "token"
-  | "nft"
-  | "patch"
-  | "leaderboard"
-  | "other";
+export type EventCategory = string;
 
 export type ContentFormat = "thread" | "infographic" | "guide" | "comparison" | "analysis" | "narrative" | "breakdown";
 export type ContentPotential = "high" | "medium" | "low";

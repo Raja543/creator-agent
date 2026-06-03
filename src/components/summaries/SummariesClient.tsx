@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, ChevronDown, Flame } from "lucide-react";
 import { timeAgo, formatTimestamp } from "@/lib/dates";
+import { ecoColor } from "@/lib/ecosystem-colors";
 
 interface Summary {
   id: string;
@@ -12,21 +13,17 @@ interface Summary {
   timeframe?: string;
 }
 
-const ECOSYSTEMS = ["RONIN", "IMMUTABLE", "ABSTRACT"] as const;
+function prettyLabel(v: string): string {
+  return v.replace(/[_-]/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+}
 
-const ECO_VAR: Record<string, string> = {
-  RONIN: "var(--ronin)",
-  IMMUTABLE: "var(--immutable)",
-  ABSTRACT: "var(--abstract)",
-};
-
-
+// Parse summary content. Keys preserved as-is (ecosystem names + "overall").
 function parseSections(content: string): Record<string, string> {
   try {
     const parsed = JSON.parse(content);
     const result: Record<string, string> = {};
     for (const [k, v] of Object.entries(parsed)) {
-      if (typeof v === "string") result[k.toUpperCase()] = v;
+      if (typeof v === "string") result[k] = v;
     }
     return result;
   } catch {
@@ -40,11 +37,23 @@ function parseSections(content: string): Record<string, string> {
   }
 }
 
+// Find the "overall" section regardless of casing
+function getOverall(sections: Record<string, string>): string {
+  const key = Object.keys(sections).find((k) => k.toLowerCase() === "overall");
+  return key ? sections[key] : "";
+}
+
+// Ecosystem sections = everything except "overall"
+function getEcoSections(sections: Record<string, string>): [string, string][] {
+  return Object.entries(sections).filter(([k]) => k.toLowerCase() !== "overall");
+}
+
 function ReportCard({ summary, index, total }: { summary: Summary; index: number; total: number }) {
   const [expanded, setExpanded] = useState(false);
   const sections = parseSections(summary.content);
-  const overall = sections["OVERALL"] ?? sections["overall"] ?? "";
-  const hasEcosystems = ECOSYSTEMS.some((eco) => sections[eco] || sections[eco.toLowerCase()]);
+  const overall = getOverall(sections);
+  const ecoSections = getEcoSections(sections);
+  const hasEcosystems = ecoSections.length > 0;
 
   return (
     <div className="cos-report-card">
@@ -67,16 +76,12 @@ function ReportCard({ summary, index, total }: { summary: Summary; index: number
             )}
             {/* Ecosystem dots */}
             <div className="flex items-center gap-1.5">
-              {ECOSYSTEMS.map((eco) => {
-                const body = sections[eco] || sections[eco.toLowerCase()];
-                if (!body) return null;
-                return (
-                  <span
-                    key={eco}
-                    style={{ width: 6, height: 6, borderRadius: "50%", background: ECO_VAR[eco], display: "inline-block" }}
-                  />
-                );
-              })}
+              {ecoSections.map(([eco]) => (
+                <span
+                  key={eco}
+                  style={{ width: 6, height: 6, borderRadius: "50%", background: ecoColor(eco).hex, display: "inline-block" }}
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -118,14 +123,18 @@ function ReportCard({ summary, index, total }: { summary: Summary; index: number
             transition={{ duration: 0.22, ease: "easeInOut" }}
             style={{ overflow: "hidden", borderTop: "1px solid var(--hairline)" }}
           >
-            {ECOSYSTEMS.map((eco) => {
-              const body = sections[eco] || sections[eco.toLowerCase()];
-              if (!body) return null;
+            {ecoSections.map(([eco, body]) => {
               const bullets = body.split("\n- ").map((b) => b.replace(/^- /, "").trim()).filter(Boolean);
+              const c = ecoColor(eco);
               return (
                 <div key={eco} className="cos-ecosys-block" style={{ marginTop: 14 }}>
                   <div className="cos-ecosys-label">
-                    <span className={`cos-eco ${eco.toLowerCase()}`}>{eco}</span>
+                    <span style={{
+                      fontFamily: "var(--font-geist-mono)", fontSize: 10.5, fontWeight: 700,
+                      letterSpacing: "0.06em", textTransform: "uppercase",
+                      padding: "2px 8px", borderRadius: 5,
+                      color: c.hex, background: c.dim, border: `1px solid ${c.border}`,
+                    }}>{prettyLabel(eco)}</span>
                     <span style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10.5, color: "var(--fg-4)" }}>
                       {bullets.length} signal{bullets.length !== 1 ? "s" : ""}
                     </span>

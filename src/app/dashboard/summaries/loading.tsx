@@ -29,7 +29,7 @@ export default function SummariesLoading() {
             </div>
             {i === 0 && (
               <div className="border-t border-border px-5 py-4 space-y-4">
-                {["RONIN", "IMMUTABLE", "ABSTRACT", "OVERALL"].map((section) => (
+                {[0, 1, 2, 3].map((section) => (
                   <div key={section} className="space-y-2">
                     <Bone className="h-3 w-20" />
                     <Bone className="h-3 w-full" />

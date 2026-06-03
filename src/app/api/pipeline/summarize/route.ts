@@ -14,15 +14,12 @@ async function runSummarize(userId: string) {
   const summary = await generateEcosystemSummary(events);
   if (!summary) return { error: "Failed to generate summary" };
 
-  const content = [
-    "RONIN\n" + summary.ronin,
-    "IMMUTABLE\n" + summary.immutable,
-    "ABSTRACT\n" + summary.abstract,
-    "OVERALL\n" + summary.overall,
-  ].join("\n\n");
+  // Store as JSON — keys are the user's own ecosystems plus "overall"
+  const content = JSON.stringify(summary);
+  const ecosystems = Object.keys(summary).filter((k) => k.toLowerCase() !== "overall");
 
   const { data: saved } = await supabaseService.from("summaries").insert({
-    user_id: userId, timeframe: "4h", ecosystems: ["ronin", "immutable", "abstract"], content,
+    user_id: userId, timeframe: "4h", ecosystems, content,
   }).select().single();
 
   await logActivity(userId, "summary_generated",

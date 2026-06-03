@@ -4,16 +4,10 @@ import { useState } from "react";
 import { ExternalLink, Trash2, AlertTriangle, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import type { Event, EventCategory } from "@/lib/database.types";
+import type { Event } from "@/lib/database.types";
 import { formatRelativeTime, formatEventDate } from "@/lib/dates";
 import { scoreClass } from "@/lib/utils";
-import { ecoColor } from "@/lib/ecosystem-colors";
-
-const CATEGORIES: EventCategory[] = [
-  "campaign", "launch", "partnership", "migration", "staking",
-  "gameplay", "tournament", "funding", "metrics", "token", "nft",
-  "patch", "leaderboard", "other",
-];
+import { ecoColor, tagColor } from "@/lib/ecosystem-colors";
 
 function prettyLabel(v: string): string {
   return v.replace(/[_-]/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
@@ -31,24 +25,6 @@ function EcoBadge({ name }: { name: string }) {
     }}>{prettyLabel(name)}</span>
   );
 }
-
-const CAT_COLORS: Record<string, { color: string; bg: string }> = {
-  campaign:    { color: "#f97316", bg: "rgba(249,115,22,0.12)" },
-  launch:      { color: "#22c55e", bg: "rgba(34,197,94,0.12)" },
-  partnership: { color: "#8b5cf6", bg: "rgba(139,92,246,0.12)" },
-  migration:   { color: "#3b82f6", bg: "rgba(59,130,246,0.12)" },
-  staking:     { color: "#eab308", bg: "rgba(234,179,8,0.12)" },
-  gameplay:    { color: "#06b6d4", bg: "rgba(6,182,212,0.12)" },
-  tournament:  { color: "#ec4899", bg: "rgba(236,72,153,0.12)" },
-  funding:     { color: "#10b981", bg: "rgba(16,185,129,0.12)" },
-  metrics:     { color: "#14b8a6", bg: "rgba(20,184,166,0.12)" },
-  token:       { color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
-  nft:         { color: "#a855f7", bg: "rgba(168,85,247,0.12)" },
-  patch:       { color: "#64748b", bg: "rgba(100,116,139,0.12)" },
-  leaderboard: { color: "#f43f5e", bg: "rgba(244,63,94,0.12)" },
-  other:       { color: "#6b7280", bg: "rgba(107,114,128,0.1)" },
-};
-
 
 interface SourceTweet {
   tweet_id: string;
@@ -204,13 +180,13 @@ export function EventsClient({ initialEvents }: Props) {
                   <EcoBadge name={eco} />
                   {event.category && (() => {
                     const cat = event.category as string;
-                    const c = CAT_COLORS[cat] ?? CAT_COLORS.other;
+                    const c = tagColor(cat);
                     return (
                       <span style={{
                         fontFamily: "var(--font-geist-mono)", fontSize: 9.5, fontWeight: 700,
                         letterSpacing: "0.06em", textTransform: "uppercase",
                         padding: "2px 7px", borderRadius: 4,
-                        background: c.bg, color: c.color,
+                        background: c.dim, color: c.hex,
                       }}>{cat}</span>
                     );
                   })()}
@@ -477,17 +453,14 @@ export function EventsClient({ initialEvents }: Props) {
                 </div>
                 <div className="space-y-1.5">
                   <label style={{ fontFamily: "var(--font-geist-mono)", fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-4)" }}>Category</label>
-                  <select
+                  <input
+                    type="text"
                     value={editForm.category}
                     onChange={(e) => setField("category", e.target.value)}
+                    placeholder="e.g. launch"
                     className="w-full rounded-md px-3 py-2 text-sm focus:outline-none"
                     style={{ background: "var(--surface-2)", border: "1px solid var(--hairline)", color: "var(--fg)", fontSize: 13 }}
-                  >
-                    <option value="">None</option>
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat} className="capitalize">{cat}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
               </div>
 

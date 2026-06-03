@@ -26,14 +26,14 @@ export interface TweetClassification {
   keywords: string[];
 }
 
-const CLASSIFICATION_SYSTEM = `You are an intelligence analyst for a Web3 gaming content creator tracking Ronin, Immutable, and Abstract ecosystems on X (Twitter).
+const CLASSIFICATION_SYSTEM = `You are an intelligence analyst for a web3 content creator tracking crypto/web3 ecosystems and projects on X (Twitter). The specific ecosystem is provided as context below when available.
 
 Your job: decide whether a tweet represents a real, newsworthy ecosystem event worth tracking — and if so, extract the key facts precisely.
 
 Return JSON:
 {
   "important": true or false,
-  "category": one of: campaign|launch|partnership|migration|staking|gameplay|tournament|funding|metrics|token|nft|patch|leaderboard|other,
+  "category": "a concise lowercase label (1-2 words) for the event type that best fits the content — e.g. launch, partnership, tournament, funding, token, staking, update. Pick the single most fitting label; reuse common labels where they apply rather than inventing near-duplicates.",
   "importance_score": integer 1-10,
   "summary": "one precise sentence — WHO did WHAT with SPECIFIC details (numbers, dates, names if present)",
   "keywords": ["3-5 specific keywords — must be project/feature/person names, not generic words like 'update' or 'game'"]
@@ -73,45 +73,47 @@ Tweet to analyze:
   }
 }
 
-export interface EcosystemSummary {
-  ronin: string;
-  immutable: string;
-  abstract: string;
-  overall: string;
-}
-
-const SUMMARY_PROMPT = `You are an intelligence analyst writing a briefing for a Web3 gaming content creator on X.
-
-Produce a structured intelligence report from the events below. Be specific — cite project names, numbers, dates. The creator needs this to decide what to post about TODAY.
-
-Return JSON:
-{
-  "ronin": "bullet-point summary of Ronin ecosystem events. Use '- ' prefix for each bullet. Include: what happened, which game/project, why it matters for content. Flag high-importance events with 🔥. Write 'No significant updates.' if nothing relevant.",
-  "immutable": "same format for Immutable ecosystem",
-  "abstract": "same format for Abstract ecosystem",
-  "overall": "2-3 sentences: What is the single biggest narrative right now across all ecosystems? What should the creator post about in the next 24 hours and why?"
-}
-
-Rules:
-- Name specific projects, games, campaigns, and tokens — never write vague sentences like "a game released an update"
-- Explain the CREATOR OPPORTUNITY for each event (what angle, what audience reaction to expect)
-- overall must be actionable: recommend a specific content angle, not just describe what happened
-- Never invent facts not present in the events list
-
-Events:
-`;
+/** Dynamic summary: one key per ecosystem present in the events, plus "overall". */
+export type EcosystemSummary = Record<string, string>;
 
 export async function generateEcosystemSummary(
   events: Array<{ title: string; summary: string; ecosystem: string; importance_score: number; keywords?: string[] | null; category?: string }>
 ): Promise<EcosystemSummary | null> {
   try {
+    const ecosystems = [...new Set(events.map((e) => e.ecosystem).filter(Boolean))];
+
     const eventsText = events
       .map((e) => {
         const kw = e.keywords?.length ? ` [${e.keywords.join(", ")}]` : "";
-        return `[${e.ecosystem.toUpperCase()} | ${e.category ?? "general"} | score:${e.importance_score}] ${e.title}${kw}`;
+        const eco = e.ecosystem ? e.ecosystem.toUpperCase() : "GENERAL";
+        return `[${eco} | ${e.category ?? "general"} | score:${e.importance_score}] ${e.title}${kw}`;
       })
       .join("\n");
-    const data = await jsonChat(SUMMARY_PROMPT + eventsText);
+
+    // Build the JSON shape dynamically — one key per ecosystem the user tracks
+    const sectionLines = ecosystems
+      .map((eco) => `  "${eco}": "bullet-point summary of ${eco} events. Use '- ' prefix for each bullet. Include what happened, which project, and why it matters for content. Flag high-importance events with 🔥. Write 'No significant updates.' if nothing relevant."`)
+      .join(",\n");
+
+    const prompt = `You are an intelligence analyst writing a briefing for a web3 content creator on X.
+
+Produce a structured intelligence report from the events below. Be specific — cite project names, numbers, dates. The creator needs this to decide what to post about TODAY.
+
+Return JSON with EXACTLY these keys${ecosystems.length ? " (one per ecosystem, using the exact ecosystem names shown)" : ""}:
+{
+${sectionLines ? sectionLines + ",\n" : ""}  "overall": "2-3 sentences: What is the single biggest narrative right now across all ecosystems? What should the creator post about in the next 24 hours and why?"
+}
+
+Rules:
+- Name specific projects, campaigns, and tokens — never write vague sentences like "a project released an update"
+- Explain the CREATOR OPPORTUNITY for each event (what angle, what audience reaction to expect)
+- overall must be actionable: recommend a specific content angle, not just describe what happened
+- Never invent facts not present in the events list
+
+Events:
+${eventsText}`;
+
+    const data = await jsonChat(prompt);
     return data as EcosystemSummary;
   } catch {
     return null;
