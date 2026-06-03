@@ -224,10 +224,13 @@ function SidebarContent({ onClose, collapsed, onToggleCollapse, isAdmin }: { onC
                 <LogOut className="size-3.5" />
               </button>
             </div>
-            {/* Send feedback */}
+            {/* Send feedback — opens Gmail compose in a new tab (works without a
+                desktop mail client; mailto silently fails when none is set) */}
             {FEEDBACK_EMAIL && (
               <a
-                href={`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Creator OS — Beta feedback")}`}
+                href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(FEEDBACK_EMAIL)}&su=${encodeURIComponent("Creator OS Beta feedback")}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-colors"
               >
                 <MessageSquarePlus className="size-3.5 shrink-0" />
