@@ -8,7 +8,7 @@ const STEPS = [
     icon: Radio,
     color: "#06b6d4",
     title: "1 · Add your sources",
-    body: "Add the X (Twitter) accounts you want to track — projects, founders, media, anyone relevant to the web3 ecosystems you cover. Tag each with an ecosystem and category (you make these up; type anything).",
+    body: "Add the X (Twitter) accounts you want to track: projects, founders, media, anyone relevant to the web3 ecosystems you cover. Tag each with an ecosystem and category (you make these up; type anything).",
     href: "/dashboard/sources",
     cta: "Add sources",
   },
@@ -16,7 +16,7 @@ const STEPS = [
     icon: Cpu,
     color: "#8b5cf6",
     title: "2 · Run the pipeline",
-    body: "The pipeline collects recent tweets from your sources, filters out noise, and uses AI to detect genuinely newsworthy events — scoring each on importance and clustering similar ones together.",
+    body: "The pipeline collects recent tweets from your sources, filters out noise, and uses AI to detect genuinely newsworthy events, scoring each on importance and clustering similar ones together.",
     href: "/admin/pipeline",
     cta: "Run pipeline",
   },
@@ -46,7 +46,7 @@ export default function HelpPage() {
         <h1 className="cos-page-title">How Creator OS works</h1>
         <p className="cos-page-sub">
           Your AI intelligence desk for web3 content. It watches the accounts you care about, surfaces what
-          actually matters, and turns it into content ideas — so you spend less time scrolling and more time posting.
+          actually matters, and turns it into content ideas, so you spend less time scrolling and more time posting.
         </p>
       </div>
 
@@ -78,8 +78,8 @@ export default function HelpPage() {
           Good to know
         </div>
         <p style={{ margin: "0 0 8px" }}>
-          <strong style={{ color: "var(--fg-2)" }}>Ecosystems & categories are yours.</strong> There's no fixed list —
-          type whatever fits your niche (Solana, DeFi, NFTs, a specific game). Filters and colors adapt automatically.
+          <strong style={{ color: "var(--fg-2)" }}>Ecosystems & categories are yours.</strong> There's no fixed list.
+          Type whatever fits your niche (Solana, DeFi, NFTs, a specific game). Filters and colors adapt automatically.
         </p>
         <p style={{ margin: "0 0 8px" }}>
           <strong style={{ color: "var(--fg-2)" }}>Quality over quantity.</strong> The AI only surfaces events it scores
