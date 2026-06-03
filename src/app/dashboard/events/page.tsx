@@ -22,6 +22,18 @@ export default async function EventsPage({ searchParams }: PageProps) {
 
   const sortColumn = activeSort === "score" ? "importance_score" : "created_at";
 
+  // All distinct ecosystems/categories in this user's events → dynamic filters
+  const { data: facetRows } = await supabase
+    .from("events")
+    .select("ecosystem, category")
+    .eq("user_id", userId!);
+  const ecosystems = [
+    ...new Set((facetRows ?? []).map((r) => r.ecosystem).filter(Boolean) as string[]),
+  ].sort();
+  const categories = [
+    ...new Set((facetRows ?? []).map((r) => r.category).filter(Boolean) as string[]),
+  ].sort();
+
   let query = supabase
     .from("events")
     .select("*")
@@ -44,7 +56,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
         <h1 className="cos-page-title">Events</h1>
         <p className="cos-page-sub">Detected from tracked sources. Scored on engagement potential.</p>
       </div>
-      <EventsFilters />
+      <EventsFilters ecosystems={ecosystems} categories={categories} />
       {error && (
         <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "var(--rose-dim)", color: "var(--rose)", border: "1px solid rgba(244,63,94,.2)" }}>
           Failed to load events: {error.message}

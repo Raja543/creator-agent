@@ -4,23 +4,33 @@ import { useState } from "react";
 import { ExternalLink, Trash2, AlertTriangle, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import type { Event, Ecosystem, EventCategory } from "@/lib/database.types";
+import type { Event, EventCategory } from "@/lib/database.types";
 import { formatRelativeTime, formatEventDate } from "@/lib/dates";
 import { scoreClass } from "@/lib/utils";
+import { ecoColor } from "@/lib/ecosystem-colors";
 
-const ECOSYSTEMS: Ecosystem[] = ["ronin", "immutable", "abstract", "other"];
 const CATEGORIES: EventCategory[] = [
   "campaign", "launch", "partnership", "migration", "staking",
   "gameplay", "tournament", "funding", "metrics", "token", "nft",
   "patch", "leaderboard", "other",
 ];
 
-const ECO_COLORS: Record<string, { color: string; bg: string; border: string }> = {
-  ronin:     { color: "#3b82f6", bg: "rgba(59,130,246,0.12)",  border: "rgba(59,130,246,0.3)" },
-  immutable: { color: "#a855f7", bg: "rgba(168,85,247,0.12)",  border: "rgba(168,85,247,0.3)" },
-  abstract:  { color: "#10b981", bg: "rgba(16,185,129,0.12)",  border: "rgba(16,185,129,0.3)" },
-  other:     { color: "#6b7280", bg: "rgba(107,114,128,0.1)",  border: "rgba(107,114,128,0.2)" },
-};
+function prettyLabel(v: string): string {
+  return v.replace(/[_-]/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+// Inline ecosystem badge — works for any user-defined ecosystem
+function EcoBadge({ name }: { name: string }) {
+  const c = ecoColor(name);
+  return (
+    <span style={{
+      fontFamily: "var(--font-geist-mono)", fontSize: 9.5, fontWeight: 700,
+      letterSpacing: "0.06em", textTransform: "uppercase",
+      padding: "2px 7px", borderRadius: 4,
+      color: c.hex, background: c.dim,
+    }}>{prettyLabel(name)}</span>
+  );
+}
 
 const CAT_COLORS: Record<string, { color: string; bg: string }> = {
   campaign:    { color: "#f97316", bg: "rgba(249,115,22,0.12)" },
@@ -191,7 +201,7 @@ export function EventsClient({ initialEvents }: Props) {
               {/* Head: tags + score */}
               <div className="cos-event-card-head">
                 <div className="cos-event-card-tags">
-                  <span className={`cos-eco ${eco}`}>{eco}</span>
+                  <EcoBadge name={eco} />
                   {event.category && (() => {
                     const cat = event.category as string;
                     const c = CAT_COLORS[cat] ?? CAT_COLORS.other;
@@ -227,7 +237,7 @@ export function EventsClient({ initialEvents }: Props) {
 
               {/* Source tweets */}
               {sourceTweets.length > 0 && (() => {
-                const ecoC = ECO_COLORS[eco] ?? ECO_COLORS.other;
+                const ecoC = ecoColor(eco);
                 return (
                   <div
                     className="flex items-center gap-1.5 flex-wrap"
@@ -243,8 +253,8 @@ export function EventsClient({ initialEvents }: Props) {
                         style={{
                           fontSize: "11px",
                           fontFamily: "var(--font-geist-mono)",
-                          color: ecoC.color,
-                          background: ecoC.bg,
+                          color: ecoC.hex,
+                          background: ecoC.dim,
                           padding: "2px 9px",
                           border: `1px solid ${ecoC.border}`,
                         }}
@@ -306,7 +316,7 @@ export function EventsClient({ initialEvents }: Props) {
               {/* Modal header */}
               <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--hairline)" }}>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`cos-eco ${eco}`}>{eco}</span>
+                  <EcoBadge name={eco} />
                   {viewTarget.category && <span className="cos-chip">{viewTarget.category}</span>}
                   {viewTarget.importance_score !== null && (
                     <span className={`cos-score ${scoreClass(viewTarget.importance_score)}`}>
@@ -456,17 +466,14 @@ export function EventsClient({ initialEvents }: Props) {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label style={{ fontFamily: "var(--font-geist-mono)", fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-4)" }}>Ecosystem</label>
-                  <select
+                  <input
+                    type="text"
                     value={editForm.ecosystem}
                     onChange={(e) => setField("ecosystem", e.target.value)}
+                    placeholder="e.g. Solana"
                     className="w-full rounded-md px-3 py-2 text-sm focus:outline-none"
                     style={{ background: "var(--surface-2)", border: "1px solid var(--hairline)", color: "var(--fg)", fontSize: 13 }}
-                  >
-                    <option value="">None</option>
-                    {ECOSYSTEMS.map((eco) => (
-                      <option key={eco} value={eco} className="capitalize">{eco}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <label style={{ fontFamily: "var(--font-geist-mono)", fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-4)" }}>Category</label>

@@ -1,15 +1,9 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type Ecosystem = "ronin" | "immutable" | "abstract" | "other";
-export type AccountCategory =
-  | "official_game"
-  | "ecosystem"
-  | "founder"
-  | "creator"
-  | "analytics"
-  | "media"
-  | "guild"
-  | "influencer";
+// Ecosystem and account category are user-defined (free-form) in beta —
+// users type their own when adding sources, so these are open strings.
+export type Ecosystem = string;
+export type AccountCategory = string;
 
 export type EventCategory =
   | "campaign"

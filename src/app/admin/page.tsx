@@ -1,24 +1,25 @@
 import { createClient } from "@/lib/supabase-server";
 import { getRequestUserId } from "@/lib/auth-headers";
+import { ecoColor } from "@/lib/ecosystem-colors";
 import Link from "next/link";
 import { Users, Radio, Zap, Lightbulb, Database, FileText, Play, ArrowRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
+function prettyLabel(v: string): string {
+  return v.replace(/[_-]/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
 export default async function AdminPage() {
   const [userId, supabase] = await Promise.all([getRequestUserId(), createClient()]);
 
-  const [accounts, activeAccounts, events, ideas, tweets, byEco] = await Promise.all([
+  const [accounts, activeAccounts, events, ideas, tweets, ecoRows] = await Promise.all([
     supabase.from("accounts").select("id", { count: "exact" }).eq("user_id", userId!),
     supabase.from("accounts").select("id", { count: "exact" }).eq("user_id", userId!).eq("active", true),
     supabase.from("events").select("id", { count: "exact" }).eq("user_id", userId!).gte("created_at", new Date(Date.now() - 86400000).toISOString()),
     supabase.from("content_ideas").select("id", { count: "exact" }).eq("user_id", userId!),
     supabase.from("tweets").select("id", { count: "exact" }).eq("user_id", userId!),
-    Promise.all([
-      supabase.from("accounts").select("id", { count: "exact" }).eq("user_id", userId!).eq("ecosystem", "ronin"),
-      supabase.from("accounts").select("id", { count: "exact" }).eq("user_id", userId!).eq("ecosystem", "immutable"),
-      supabase.from("accounts").select("id", { count: "exact" }).eq("user_id", userId!).eq("ecosystem", "abstract"),
-    ]),
+    supabase.from("accounts").select("ecosystem").eq("user_id", userId!),
   ]);
 
   const stats = {
@@ -27,22 +28,23 @@ export default async function AdminPage() {
     events: events.count ?? 0,
     ideas: ideas.count ?? 0,
     tweets: tweets.count ?? 0,
-    ronin: byEco[0].count ?? 0,
-    immutable: byEco[1].count ?? 0,
-    abstract: byEco[2].count ?? 0,
   };
+
+  // Count accounts per distinct ecosystem the user actually tracks
+  const ecoCounts = (ecoRows.data ?? []).reduce<Record<string, number>>((acc, r) => {
+    const eco = (r.ecosystem as string | null)?.trim();
+    if (eco) acc[eco] = (acc[eco] ?? 0) + 1;
+    return acc;
+  }, {});
+  const ecosystems = Object.entries(ecoCounts)
+    .map(([key, count]) => ({ key, label: prettyLabel(key), count, color: ecoColor(key).hex }))
+    .sort((a, b) => b.count - a.count);
 
   const kpis = [
     { label: "TOTAL ACCOUNTS",   value: stats.total,  icon: Users,    color: "#06b6d4", bg: "rgba(6,182,212,0.12)",   sub: "all ecosystems" },
     { label: "ACTIVE ACCOUNTS",  value: stats.active, icon: Radio,    color: "#4ade80", bg: "rgba(74,222,128,0.08)",  sub: "currently tracked" },
     { label: "EVENTS · 24H",     value: stats.events, icon: Zap,      color: "#f59e0b", bg: "rgba(245,158,11,0.12)",  sub: "last 24 hours" },
     { label: "TWEETS COLLECTED", value: stats.tweets, icon: Database, color: "#8b5cf6", bg: "rgba(139,92,246,0.12)",  sub: "all-time" },
-  ];
-
-  const ecosystems = [
-    { key: "ronin",     label: "Ronin",     count: stats.ronin,     color: "#3b82f6" },
-    { key: "immutable", label: "Immutable", count: stats.immutable,  color: "#a855f7" },
-    { key: "abstract",  label: "Abstract",  count: stats.abstract,   color: "#10b981" },
   ];
 
   const ACTION_TONE_COLORS: Record<string, string> = {
@@ -53,7 +55,7 @@ export default async function AdminPage() {
   };
 
   const actions = [
-    { href: "/admin/accounts",     icon: Users,     tone: "ronin",   title: "Manage accounts",  desc: "Add, edit, categorize, and prioritize X accounts by ecosystem",       note: `${stats.total} total · 3 ecosystems` },
+    { href: "/admin/accounts",     icon: Users,     tone: "ronin",   title: "Manage accounts",  desc: "Add, edit, categorize, and prioritize X accounts by ecosystem",       note: `${stats.total} total · ${ecosystems.length} ecosystem${ecosystems.length !== 1 ? "s" : ""}` },
     { href: "/dashboard/sources",  icon: Radio,     tone: "signal",  title: "View sources",     desc: "See all tracked accounts in dashboard view",                          note: `${stats.active} active` },
     { href: "/dashboard/events",   icon: Zap,       tone: "amber",   title: "Browse events",    desc: "Inspect detected ecosystem events with full context",                  note: `${stats.events} events · 24h` },
     { href: "/dashboard/ideas",    icon: Lightbulb, tone: "violet",  title: "Content ideas",    desc: "Manage generated content opportunities",                               note: `${stats.ideas} ideas` },
@@ -83,24 +85,30 @@ export default async function AdminPage() {
       </div>
 
       <div className="cos-divider">Ecosystem distribution</div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {ecosystems.map((eco) => {
-          const share = stats.total > 0 ? Math.round((eco.count / stats.total) * 100) : 0;
-          return (
-            <div key={eco.key} className={`cos-eco-card ${eco.key}`}>
-              <div className="cos-eco-label"><span className="dot" />{eco.label}</div>
-              <div className="cos-eco-count" style={{ color: eco.color }}>{eco.count} <span>accounts</span></div>
-              <div style={{ marginTop: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--font-geist-mono)", fontSize: 10.5, color: "var(--fg-4)", marginBottom: 4 }}>
-                  <span>Share</span><span style={{ color: eco.color }}>{share}%</span>
+      {ecosystems.length === 0 ? (
+        <div className="cos-card" style={{ padding: "20px", textAlign: "center", fontFamily: "var(--font-geist-mono)", fontSize: 11.5, color: "var(--fg-4)" }}>
+          No ecosystems yet. Add sources and tag them with an ecosystem to see the breakdown here.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {ecosystems.map((eco) => {
+            const share = stats.total > 0 ? Math.round((eco.count / stats.total) * 100) : 0;
+            return (
+              <div key={eco.key} className="cos-eco-card" style={{ borderTop: `2px solid ${eco.color}` }}>
+                <div className="cos-eco-label"><span className="dot" style={{ background: eco.color }} />{eco.label}</div>
+                <div className="cos-eco-count" style={{ color: eco.color }}>{eco.count} <span>accounts</span></div>
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--font-geist-mono)", fontSize: 10.5, color: "var(--fg-4)", marginBottom: 4 }}>
+                    <span>Share</span><span style={{ color: eco.color }}>{share}%</span>
+                  </div>
+                  <div className="cos-pipe-track"><div className="cos-pipe-fill" style={{ width: `${share}%`, background: eco.color }} /></div>
                 </div>
-                <div className="cos-pipe-track"><div className="cos-pipe-fill" style={{ width: `${share}%`, background: eco.color }} /></div>
+                <div className="cos-eco-foot"><span>{eco.count} sources</span><span style={{ color: eco.color }}>{share}%</span></div>
               </div>
-              <div className="cos-eco-foot"><span>{eco.count} sources</span><span style={{ color: eco.color }}>{share}%</span></div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="cos-divider">Quick actions</div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

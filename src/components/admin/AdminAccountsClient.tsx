@@ -6,29 +6,28 @@ import {
   Users, ExternalLink, ChevronDown,
 } from "lucide-react";
 import type { Account, AccountInsert, Ecosystem, AccountCategory } from "@/lib/database.types";
-import { ACCOUNT_ECOSYSTEMS } from "@/lib/constants";
+import { ecoColor } from "@/lib/ecosystem-colors";
 
-const CATEGORIES: { value: AccountCategory; label: string; icon: string }[] = [
-  { value: "official_game", label: "Official Game", icon: "🎮" },
-  { value: "ecosystem",     label: "Ecosystem",     icon: "🌐" },
-  { value: "founder",       label: "Founder",       icon: "👤" },
-  { value: "creator",       label: "Creator",       icon: "✍️" },
-  { value: "analytics",     label: "Analytics",     icon: "📊" },
-  { value: "media",         label: "Media",         icon: "📰" },
-  { value: "guild",         label: "Guild",         icon: "🏰" },
-  { value: "influencer",    label: "Influencer",    icon: "📣" },
-];
+// Pretty-print a free-form ecosystem/category value (e.g. "official_game" → "Official Game")
+function prettyLabel(v?: string | null): string {
+  if (!v) return "";
+  return v.replace(/[_-]/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+}
 
-const CATEGORY_CHIP: Record<string, string> = {
-  official_game: "signal",
-  ecosystem:     "ronin",
-  founder:       "amber",
-  creator:       "violet",
-  analytics:     "",
-  media:         "amber",
-  guild:         "violet",
-  influencer:    "rose",
-};
+// Inline badge for any ecosystem value (works for user-defined ecosystems)
+function EcoBadge({ name }: { name: string }) {
+  const c = ecoColor(name);
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center",
+      fontFamily: "var(--font-geist-mono)", fontSize: 10.5, fontWeight: 600,
+      padding: "2px 8px", borderRadius: 5, textTransform: "capitalize",
+      color: c.hex, background: c.dim, border: `1px solid ${c.border}`,
+    }}>
+      {prettyLabel(name)}
+    </span>
+  );
+}
 
 const PRESET_ACCOUNTS: Array<{
   username: string;
@@ -145,6 +144,17 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
     });
   }, [accounts, search, filterEco, filterCat, filterActive]);
 
+  // Distinct ecosystem / category values the user has already used — power the
+  // filter dropdowns, the form autocomplete, and the grouped view.
+  const ecoOptions = useMemo(
+    () => [...new Set(accounts.map((a) => a.ecosystem).filter(Boolean) as string[])].sort(),
+    [accounts],
+  );
+  const catOptions = useMemo(
+    () => [...new Set(accounts.map((a) => a.category).filter(Boolean) as string[])].sort(),
+    [accounts],
+  );
+
   function openAdd() {
     setEditAccount(null);
     setForm(EMPTY_FORM);
@@ -257,9 +267,6 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
     setLoading(false);
   }
 
-  const ecoConfig = Object.fromEntries(ACCOUNT_ECOSYSTEMS.map((e) => [e.value, e]));
-  const catConfig = Object.fromEntries(CATEGORIES.map((c) => [c.value, c]));
-
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -279,7 +286,7 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
             onChange={setFilterEco}
             options={[
               { value: "all", label: "All Ecosystems" },
-              ...ACCOUNT_ECOSYSTEMS.map((e) => ({ value: e.value, label: e.label })),
+              ...ecoOptions.map((e) => ({ value: e, label: prettyLabel(e) })),
             ]}
           />
           <SelectFilter
@@ -287,7 +294,7 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
             onChange={setFilterCat}
             options={[
               { value: "all", label: "All Categories" },
-              ...CATEGORIES.map((c) => ({ value: c.value, label: c.label })),
+              ...catOptions.map((c) => ({ value: c, label: prettyLabel(c) })),
             ]}
           />
           <SelectFilter
@@ -332,22 +339,19 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
       {/* Grouped by category or flat */}
       {filterCat === "all" && filterEco === "all" && !search ? (
         <div className="space-y-6">
-          {CATEGORIES.map((cat) => {
-            const catAccounts = filtered.filter((a) => a.category === cat.value);
+          {catOptions.map((cat) => {
+            const catAccounts = filtered.filter((a) => a.category === cat);
             if (catAccounts.length === 0) return null;
             return (
-              <div key={cat.value}>
+              <div key={cat}>
                 <div className="cos-divider">
-                  <span>{cat.icon}</span>
-                  {cat.label}
+                  {prettyLabel(cat)}
                   <span style={{ color: "var(--fg-5)", fontFamily: "var(--font-geist-mono)", fontSize: 9.5 }}>
                     ({catAccounts.length})
                   </span>
                 </div>
                 <AccountTable
                   accounts={catAccounts}
-                  ecoConfig={ecoConfig}
-                  catConfig={catConfig}
                   onEdit={openEdit}
                   onDelete={(id) => setDeleteConfirm(id)}
                   onToggle={toggleActive}
@@ -361,7 +365,6 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
             return (
               <div>
                 <div className="cos-divider">
-                  <span>❓</span>
                   Uncategorized
                   <span style={{ color: "var(--fg-5)", fontFamily: "var(--font-geist-mono)", fontSize: 9.5 }}>
                     ({uncat.length})
@@ -369,8 +372,6 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
                 </div>
                 <AccountTable
                   accounts={uncat}
-                  ecoConfig={ecoConfig}
-                  catConfig={catConfig}
                   onEdit={openEdit}
                   onDelete={(id) => setDeleteConfirm(id)}
                   onToggle={toggleActive}
@@ -382,8 +383,6 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
       ) : (
         <AccountTable
           accounts={filtered}
-          ecoConfig={ecoConfig}
-          catConfig={catConfig}
           onEdit={openEdit}
           onDelete={(id) => setDeleteConfirm(id)}
           onToggle={toggleActive}
@@ -431,28 +430,30 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Ecosystem">
-                <select
+                <input
+                  type="text"
+                  list="eco-suggestions"
                   value={form.ecosystem ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, ecosystem: (e.target.value || undefined) as Ecosystem | undefined }))}
+                  placeholder="e.g. Solana, Base, Ronin..."
                   className="cos-input"
-                >
-                  <option value="">Select ecosystem...</option>
-                  {ACCOUNT_ECOSYSTEMS.map((e) => (
-                    <option key={e.value} value={e.value}>{e.label}</option>
-                  ))}
-                </select>
+                />
+                <datalist id="eco-suggestions">
+                  {ecoOptions.map((e) => <option key={e} value={e} />)}
+                </datalist>
               </Field>
               <Field label="Category">
-                <select
+                <input
+                  type="text"
+                  list="cat-suggestions"
                   value={form.category ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, category: (e.target.value || undefined) as AccountCategory | undefined }))}
+                  placeholder="e.g. Game, Founder, Guild..."
                   className="cos-input"
-                >
-                  <option value="">Select category...</option>
-                  {CATEGORIES.map((c) => (
-                    <option key={c.value} value={c.value}>{c.icon} {c.label}</option>
-                  ))}
-                </select>
+                />
+                <datalist id="cat-suggestions">
+                  {catOptions.map((c) => <option key={c} value={c} />)}
+                </datalist>
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -617,12 +618,19 @@ export function AdminAccountsClient({ initialAccounts }: Props) {
   );
 }
 
+function Avatar({ name, ecosystem }: { name: string; ecosystem?: string | null }) {
+  const c = ecoColor(ecosystem);
+  return (
+    <div className="cos-avatar" style={{ color: c.hex, background: c.dim, border: `1px solid ${c.border}` }}>
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
 function AccountTable({
-  accounts, ecoConfig, catConfig, onEdit, onDelete, onToggle,
+  accounts, onEdit, onDelete, onToggle,
 }: {
   accounts: Account[];
-  ecoConfig: Record<string, { label: string }>;
-  catConfig: Record<string, { label: string; icon: string }>;
   onEdit: (a: Account) => void;
   onDelete: (id: string) => void;
   onToggle: (a: Account) => void;
@@ -643,9 +651,7 @@ function AccountTable({
           <div key={account.id} className="cos-card" style={{ padding: 14 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <div className="cos-user-cell">
-                <div className={`cos-avatar ${account.ecosystem ?? "other"}`}>
-                  {account.username.charAt(0).toUpperCase()}
-                </div>
+                <Avatar name={account.username} ecosystem={account.ecosystem} />
                 <div>
                   <div className="cos-user-handle">@{account.username}</div>
                   {account.display_name && <div className="cos-user-name">{account.display_name}</div>}
@@ -661,11 +667,9 @@ function AccountTable({
               </div>
             </div>
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
-              {account.ecosystem && (
-                <span className={`cos-eco ${account.ecosystem}`}>{ecoConfig[account.ecosystem]?.label}</span>
-              )}
+              {account.ecosystem && <EcoBadge name={account.ecosystem} />}
               {account.category && (
-                <span className={`cos-chip ${CATEGORY_CHIP[account.category] ?? ""}`}>{catConfig[account.category]?.label}</span>
+                <span className="cos-chip" style={{ textTransform: "capitalize" }}>{prettyLabel(account.category)}</span>
               )}
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 10, borderTop: "1px solid var(--hairline)" }}>
@@ -708,9 +712,7 @@ function AccountTable({
               <tr key={account.id}>
                 <td>
                   <div className="cos-user-cell">
-                    <div className={`cos-avatar ${account.ecosystem ?? "other"}`}>
-                      {account.username.charAt(0).toUpperCase()}
-                    </div>
+                    <Avatar name={account.username} ecosystem={account.ecosystem} />
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span className="cos-user-handle">@{account.username}</span>
@@ -731,14 +733,14 @@ function AccountTable({
                 </td>
                 <td>
                   {account.ecosystem ? (
-                    <span className={`cos-eco ${account.ecosystem}`}>{ecoConfig[account.ecosystem]?.label}</span>
+                    <EcoBadge name={account.ecosystem} />
                   ) : (
                     <span style={{ color: "var(--fg-5)" }}>-</span>
                   )}
                 </td>
                 <td>
                   {account.category ? (
-                    <span className={`cos-chip ${CATEGORY_CHIP[account.category] ?? ""}`}>{catConfig[account.category]?.label}</span>
+                    <span className="cos-chip" style={{ textTransform: "capitalize" }}>{prettyLabel(account.category)}</span>
                   ) : (
                     <span style={{ color: "var(--fg-5)" }}>-</span>
                   )}

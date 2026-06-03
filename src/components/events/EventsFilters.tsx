@@ -4,13 +4,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { useState } from "react";
 
-const ECOSYSTEM_TABS = [
-  { value: "all", label: "All" },
-  { value: "ronin", label: "Ronin" },
-  { value: "immutable", label: "Immutable" },
-  { value: "abstract", label: "Abstract" },
-];
-
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest" },
   { value: "score", label: "Top Score" },
@@ -23,13 +16,16 @@ const SCORE_OPTIONS = [
   { value: "4", label: "4+ Low" },
 ];
 
-const EVENT_CATEGORIES = [
-  "campaign", "launch", "partnership", "migration", "staking",
-  "gameplay", "tournament", "funding", "metrics", "token", "nft",
-  "patch", "leaderboard", "other",
-];
+function prettyLabel(v: string): string {
+  return v.replace(/[_-]/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+}
 
-export function EventsFilters() {
+interface EventsFiltersProps {
+  ecosystems: string[];
+  categories: string[];
+}
+
+export function EventsFilters({ ecosystems, categories }: EventsFiltersProps) {
   const router = useRouter();
   const params = useSearchParams();
 
@@ -87,17 +83,27 @@ export function EventsFilters() {
       {/* Ecosystem tabs + sort + score — stack on mobile */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-4">
         <div className="flex items-center gap-2 flex-wrap">
-          {ECOSYSTEM_TABS.map((tab) => (
+          <button
+            onClick={() => navigate("all", activeCategory, activeSort, activeScore, activeQ)}
+            className={`text-sm font-medium px-3 py-1.5 rounded-lg transition-colors ${
+              activeEco === "all"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+          >
+            All
+          </button>
+          {ecosystems.map((eco) => (
             <button
-              key={tab.value}
-              onClick={() => navigate(tab.value, activeCategory, activeSort, activeScore, activeQ)}
-              className={`text-sm font-medium px-3 py-1.5 rounded-lg transition-colors ${
-                activeEco === tab.value
+              key={eco}
+              onClick={() => navigate(eco, activeCategory, activeSort, activeScore, activeQ)}
+              className={`text-sm font-medium px-3 py-1.5 rounded-lg capitalize transition-colors ${
+                activeEco === eco
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
             >
-              {tab.label}
+              {prettyLabel(eco)}
             </button>
           ))}
         </div>
@@ -145,7 +151,7 @@ export function EventsFilters() {
         >
           All Categories
         </button>
-        {EVENT_CATEGORIES.map((cat) => (
+        {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => navigate(activeEco, cat, activeSort, activeScore, activeQ)}

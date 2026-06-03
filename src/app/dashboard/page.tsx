@@ -4,6 +4,7 @@ import { Radio, Zap, Lightbulb, Activity, FileText, Play, Target, TrendingUp, Pe
 import Link from "next/link";
 import { formatRelativeShort, formatTimestamp } from "@/lib/dates";
 import { scoreClass } from "@/lib/utils";
+import { ecoColor } from "@/lib/ecosystem-colors";
 
 export const dynamic = "force-dynamic";
 
@@ -232,13 +233,7 @@ export default async function DashboardPage() {
             {[...data.recentEvents, ...data.recentEvents].map((ev, i) => (
               <div key={i} className="cos-ticker-item">
                 {ev.ecosystem && (() => {
-                  const ecoKey = ev.ecosystem.toLowerCase();
-                  const palette: Record<string, { bg: string; color: string }> = {
-                    ronin:     { bg: "rgba(59,130,246,0.15)",  color: "#3b82f6" },
-                    immutable: { bg: "rgba(168,85,247,0.15)", color: "#a855f7" },
-                    abstract:  { bg: "rgba(16,185,129,0.15)", color: "#10b981" },
-                  };
-                  const p = palette[ecoKey] ?? { bg: "rgba(255,255,255,0.08)", color: "var(--fg-4)" };
+                  const p = ecoColor(ev.ecosystem);
                   return (
                     <span style={{
                       fontFamily: "var(--font-geist-mono)",
@@ -248,8 +243,8 @@ export default async function DashboardPage() {
                       textTransform: "uppercase" as const,
                       padding: "3px 9px",
                       borderRadius: 4,
-                      background: p.bg,
-                      color: p.color,
+                      background: p.dim,
+                      color: p.hex,
                       flexShrink: 0,
                     }}>
                       {ev.ecosystem}
@@ -277,23 +272,17 @@ export default async function DashboardPage() {
             {activeEcos.length > 0 && (
               <div style={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap: 6, margin: "16px 0 16px" }}>
                 {activeEcos.map((eco) => {
-                  const key = eco.toLowerCase();
-                  const palette: Record<string, { bg: string; color: string; border: string }> = {
-                    ronin:     { bg: "rgba(59,130,246,0.12)",  color: "#3b82f6", border: "rgba(59,130,246,0.28)" },
-                    immutable: { bg: "rgba(168,85,247,0.12)", color: "#a855f7", border: "rgba(168,85,247,0.28)" },
-                    abstract:  { bg: "rgba(16,185,129,0.12)", color: "#10b981", border: "rgba(16,185,129,0.28)" },
-                  };
-                  const p = palette[key] ?? { bg: "rgba(255,255,255,0.06)", color: "var(--fg-4)", border: "rgba(255,255,255,0.1)" };
+                  const p = ecoColor(eco);
                   return (
                     <span key={eco} style={{
                       display: "inline-flex", alignItems: "center", gap: 5,
                       fontFamily: "var(--font-geist-mono)", fontSize: 10.5, fontWeight: 700,
                       letterSpacing: "0.08em", textTransform: "uppercase",
                       padding: "4px 10px", borderRadius: 6,
-                      background: p.bg, color: p.color, border: `1px solid ${p.border}`,
+                      background: p.dim, color: p.hex, border: `1px solid ${p.border}`,
                       flexShrink: 0,
                     }}>
-                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: p.color, flexShrink: 0 }} />
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: p.hex, flexShrink: 0 }} />
                       {eco}
                     </span>
                   );
@@ -391,12 +380,7 @@ export default async function DashboardPage() {
 
               {/* Most active ecosystem */}
               {topEco && (() => {
-                const ecoColors: Record<string, { color: string; bg: string; border: string }> = {
-                  ronin:     { color: "#3b82f6", bg: "rgba(59,130,246,0.12)",  border: "rgba(59,130,246,0.2)" },
-                  immutable: { color: "#a855f7", bg: "rgba(168,85,247,0.12)", border: "rgba(168,85,247,0.2)" },
-                  abstract:  { color: "#10b981", bg: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.2)" },
-                };
-                const p = ecoColors[topEco[0].toLowerCase()] ?? { color: "var(--fg-3)", bg: "rgba(255,255,255,0.06)", border: "rgba(255,255,255,0.1)" };
+                const p = ecoColor(topEco[0]);
                 return (
                   <Link href="/dashboard/events" style={{
                     display: "flex", alignItems: "center", gap: 12,
@@ -404,11 +388,11 @@ export default async function DashboardPage() {
                     textDecoration: "none",
                     transition: "background 0.15s",
                   }} className="hover:bg-white/[0.03]">
-                    <div style={{ width: 28, height: 28, borderRadius: 7, background: p.bg, border: `1px solid ${p.border}`, display: "grid", placeItems: "center", flexShrink: 0 }}>
-                      <Zap style={{ width: 13, height: 13, color: p.color }} />
+                    <div style={{ width: 28, height: 28, borderRadius: 7, background: p.dim, border: `1px solid ${p.border}`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                      <Zap style={{ width: 13, height: 13, color: p.hex }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: p.color, marginBottom: 2 }}>Most active ecosystem</div>
+                      <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: p.hex, marginBottom: 2 }}>Most active ecosystem</div>
                       <div style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>
                         {topEco[0].charAt(0).toUpperCase() + topEco[0].slice(1)}: {topEco[1]} signal{topEco[1] !== 1 ? "s" : ""} in the last 24h
                       </div>
@@ -539,7 +523,7 @@ export default async function DashboardPage() {
             {
               num: "01",
               title: "Add your sources",
-              desc: "Add the X accounts you want to track across Ronin, Immutable and Abstract ecosystems.",
+              desc: "Add the X accounts you want to track across web3 ecosystems.",
               done: hasSource,
               href: "/dashboard/sources",
               label: hasSource ? `${data.sourceCount} source${data.sourceCount !== 1 ? "s" : ""} added` : "Add sources",

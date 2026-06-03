@@ -6,12 +6,9 @@ import type { Ecosystem } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
 
-const ECOSYSTEM_TABS: { value: string; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "ronin", label: "Ronin" },
-  { value: "immutable", label: "Immutable" },
-  { value: "abstract", label: "Abstract" },
-];
+function prettyLabel(v: string): string {
+  return v.replace(/[_-]/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+}
 
 interface PageProps {
   searchParams: Promise<{ ecosystem?: string }>;
@@ -22,6 +19,15 @@ export default async function SourcesPage({ searchParams }: PageProps) {
   const activeFilter = ecosystem ?? "all";
 
   const [userId, supabase] = await Promise.all([getRequestUserId(), createClient()]);
+
+  // Distinct ecosystems this user actually tracks → dynamic filter tabs
+  const { data: allEcoRows } = await supabase
+    .from("accounts")
+    .select("ecosystem")
+    .eq("user_id", userId!);
+  const ecosystems = [
+    ...new Set((allEcoRows ?? []).map((r) => r.ecosystem).filter(Boolean) as string[]),
+  ].sort();
 
   let query = supabase
     .from("accounts")
@@ -41,17 +47,25 @@ export default async function SourcesPage({ searchParams }: PageProps) {
         <h1 className="cos-page-title">Sources</h1>
         <p className="cos-page-sub">Tracked accounts across all monitored ecosystems. {sources.length} active.</p>
       </div>
-      <div className="cos-filter-bar">
-        {ECOSYSTEM_TABS.map((tab) => (
+      {ecosystems.length > 0 && (
+        <div className="cos-filter-bar">
           <Link
-            key={tab.value}
-            href={tab.value === "all" ? "/dashboard/sources" : `/dashboard/sources?ecosystem=${tab.value}`}
-            className={`cos-fchip ${activeFilter === tab.value ? "active" : ""}`}
+            href="/dashboard/sources"
+            className={`cos-fchip ${activeFilter === "all" ? "active" : ""}`}
           >
-            {tab.label}
+            All
           </Link>
-        ))}
-      </div>
+          {ecosystems.map((eco) => (
+            <Link
+              key={eco}
+              href={`/dashboard/sources?ecosystem=${encodeURIComponent(eco)}`}
+              className={`cos-fchip ${activeFilter === eco ? "active" : ""}`}
+            >
+              {prettyLabel(eco)}
+            </Link>
+          ))}
+        </div>
+      )}
       {error && (
         <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "var(--rose-dim)", color: "var(--rose)", border: "1px solid rgba(244,63,94,.2)" }}>
           Failed to load sources: {error.message}

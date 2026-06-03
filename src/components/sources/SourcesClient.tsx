@@ -5,21 +5,13 @@ import { Plus, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { Account } from "@/lib/database.types";
-import { ECO_BADGE } from "@/lib/ecosystem-colors";
-import { ACCOUNT_ECOSYSTEMS, ACCOUNT_CATEGORIES } from "@/lib/constants";
+import { ecoColor } from "@/lib/ecosystem-colors";
 
-
-
-const CATEGORY_COLORS: Record<string, string> = {
-  official_game: "bg-green-400/15 text-green-400",
-  ecosystem: "bg-blue-400/15 text-blue-400",
-  founder: "bg-amber-400/15 text-amber-400",
-  creator: "bg-pink-400/15 text-pink-400",
-  analytics: "bg-cyan-400/15 text-cyan-400",
-  media: "bg-orange-400/15 text-orange-400",
-  guild: "bg-violet-400/15 text-violet-400",
-  influencer: "bg-rose-400/15 text-rose-400",
-};
+// Pretty-print a free-form value (e.g. "official_game" → "Official Game")
+function prettyLabel(v?: string | null): string {
+  if (!v) return "";
+  return v.replace(/[_-]/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+}
 
 function getPriorityColor(priority: number) {
   if (priority >= 8) return "bg-green-400";
@@ -27,11 +19,15 @@ function getPriorityColor(priority: number) {
   return "bg-muted-foreground";
 }
 
-function getEcoAvatar(ecosystem: string | null | undefined): string {
-  if (ecosystem === "ronin") return "bg-sky-400/20 text-sky-400";
-  if (ecosystem === "immutable") return "bg-purple-400/20 text-purple-400";
-  if (ecosystem === "abstract") return "bg-emerald-400/20 text-emerald-400";
-  return "bg-primary/15 text-primary";
+// Inline ecosystem badge — works for any user-defined ecosystem
+function EcoChip({ name }: { name: string }) {
+  const c = ecoColor(name);
+  return (
+    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full capitalize"
+      style={{ color: c.hex, background: c.dim }}>
+      {prettyLabel(name)}
+    </span>
+  );
 }
 
 type FormData = {
@@ -83,9 +79,11 @@ interface SourceFormProps {
   onCancel: () => void;
   submitting: boolean;
   submitLabel: string;
+  ecoOptions: string[];
+  catOptions: string[];
 }
 
-function SourceForm({ initial, onSubmit, onCancel, submitting, submitLabel }: SourceFormProps) {
+function SourceForm({ initial, onSubmit, onCancel, submitting, submitLabel, ecoOptions, catOptions }: SourceFormProps) {
   const [form, setForm] = useState<FormData>(initial);
 
   function set<K extends keyof FormData>(key: K, value: FormData[K]) {
@@ -126,30 +124,30 @@ function SourceForm({ initial, onSubmit, onCancel, submitting, submitLabel }: So
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Ecosystem</label>
-          <select
+          <input
+            list="src-eco-suggestions"
             value={form.ecosystem}
             onChange={(e) => set("ecosystem", e.target.value)}
-            className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
-          >
-            <option value="">None</option>
-            {ACCOUNT_ECOSYSTEMS.map((e) => (
-              <option key={e.value} value={e.value}>{e.label}</option>
-            ))}
-          </select>
+            placeholder="e.g. Solana, Base..."
+            className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+          />
+          <datalist id="src-eco-suggestions">
+            {ecoOptions.map((e) => <option key={e} value={e} />)}
+          </datalist>
         </div>
 
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Category</label>
-          <select
+          <input
+            list="src-cat-suggestions"
             value={form.category}
             onChange={(e) => set("category", e.target.value)}
-            className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
-          >
-            <option value="">None</option>
-            {ACCOUNT_CATEGORIES.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
+            placeholder="e.g. Game, Founder..."
+            className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+          />
+          <datalist id="src-cat-suggestions">
+            {catOptions.map((c) => <option key={c} value={c} />)}
+          </datalist>
         </div>
       </div>
 
@@ -226,6 +224,15 @@ export function SourcesClient({ initialSources }: Props) {
         (s.display_name ?? "").toLowerCase().includes(q)
     );
   }, [sources, search]);
+
+  const ecoOptions = useMemo(
+    () => [...new Set(sources.map((s) => s.ecosystem).filter(Boolean) as string[])].sort(),
+    [sources],
+  );
+  const catOptions = useMemo(
+    () => [...new Set(sources.map((s) => s.category).filter(Boolean) as string[])].sort(),
+    [sources],
+  );
 
   async function handleAdd(form: FormData) {
     setSubmitting(true);
@@ -328,7 +335,8 @@ export function SourcesClient({ initialSources }: Props) {
             {displayed.map((source) => (
               <div key={source.id} className="bg-card border border-border rounded-xl p-4 space-y-3">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className={`size-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${getEcoAvatar(source.ecosystem)}`}>
+                  <div className="size-8 rounded-full flex items-center justify-center text-xs font-black shrink-0"
+                    style={{ color: ecoColor(source.ecosystem).hex, background: ecoColor(source.ecosystem).dim }}>
                     {source.username.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
@@ -340,14 +348,10 @@ export function SourcesClient({ initialSources }: Props) {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  {source.ecosystem && (
-                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${ECO_BADGE[source.ecosystem] ?? ECO_BADGE.other}`}>
-                      {source.ecosystem}
-                    </span>
-                  )}
+                  {source.ecosystem && <EcoChip name={source.ecosystem} />}
                   {source.category && (
-                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${CATEGORY_COLORS[source.category] ?? "bg-muted text-muted-foreground"}`}>
-                      {source.category.replace("_", " ")}
+                    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full capitalize bg-muted text-muted-foreground">
+                      {prettyLabel(source.category)}
                     </span>
                   )}
                 </div>
@@ -388,7 +392,8 @@ export function SourcesClient({ initialSources }: Props) {
                   <tr key={source.id} className="hover:bg-muted/30 transition-colors group">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
-                        <div className={`size-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${getEcoAvatar(source.ecosystem)}`}>
+                        <div className="size-7 rounded-full flex items-center justify-center text-xs font-black shrink-0"
+                          style={{ color: ecoColor(source.ecosystem).hex, background: ecoColor(source.ecosystem).dim }}>
                           {source.username.charAt(0).toUpperCase()}
                         </div>
                         <div>
@@ -399,15 +404,13 @@ export function SourcesClient({ initialSources }: Props) {
                     </td>
                     <td className="px-4 py-3">
                       {source.ecosystem ? (
-                        <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${ECO_BADGE[source.ecosystem] ?? ECO_BADGE.other}`}>
-                          {source.ecosystem}
-                        </span>
+                        <EcoChip name={source.ecosystem} />
                       ) : <span className="text-muted-foreground/40 text-xs">-</span>}
                     </td>
                     <td className="px-4 py-3">
                       {source.category ? (
-                        <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${CATEGORY_COLORS[source.category] ?? "bg-muted text-muted-foreground"}`}>
-                          {source.category.replace("_", " ")}
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full capitalize bg-muted text-muted-foreground">
+                          {prettyLabel(source.category)}
                         </span>
                       ) : <span className="text-muted-foreground/40 text-xs">-</span>}
                     </td>
@@ -444,6 +447,8 @@ export function SourcesClient({ initialSources }: Props) {
             onCancel={() => setShowAdd(false)}
             submitting={submitting}
             submitLabel="Add Source"
+            ecoOptions={ecoOptions}
+            catOptions={catOptions}
           />
         </Dialog>
       )}
