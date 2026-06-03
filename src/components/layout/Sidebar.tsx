@@ -18,6 +18,8 @@ import {
   X,
   Mail,
   LogOut,
+  HelpCircle,
+  MessageSquarePlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -31,7 +33,10 @@ const navItems = [
   { href: "/dashboard/summaries", label: "Reports", icon: FileText },
   { href: "/dashboard/workflow", label: "Workflow", icon: Columns3 },
   { href: "/dashboard/activity", label: "Activity", icon: Activity },
+  { href: "/dashboard/help", label: "How it works", icon: HelpCircle },
 ];
+
+const FEEDBACK_EMAIL = process.env.NEXT_PUBLIC_FEEDBACK_EMAIL;
 
 const adminItems = [
   { href: "/admin", label: "Admin Panel", icon: Shield },
@@ -219,6 +224,16 @@ function SidebarContent({ onClose, collapsed, onToggleCollapse, isAdmin }: { onC
                 <LogOut className="size-3.5" />
               </button>
             </div>
+            {/* Send feedback */}
+            {FEEDBACK_EMAIL && (
+              <a
+                href={`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Creator OS — Beta feedback")}`}
+                className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-colors"
+              >
+                <MessageSquarePlus className="size-3.5 shrink-0" />
+                Send feedback
+              </a>
+            )}
             {/* System status + collapse */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
